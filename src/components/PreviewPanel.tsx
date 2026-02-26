@@ -297,10 +297,10 @@ Qualtrics.SurveyEngine.addOnUnload(function()
       </p>
 
       <div
-        className="relative mx-auto overflow-auto rounded-md border border-slate-200 bg-slate-50"
+        className="relative w-full overflow-hidden rounded-md border border-slate-200 bg-slate-50"
         style={{
-          width: tuning.previewWidth,
-          height: tuning.previewHeight,
+          width: "100%",
+          aspectRatio: `${tuning.previewWidth} / ${tuning.previewHeight}`,
           backgroundImage: layout.backgroundImageUrl
             ? `url(${layout.backgroundImageUrl})`
             : undefined,

@@ -21,7 +21,7 @@ function App() {
           </h1>
         </header>
 
-        <main className="grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <main className="grid w-full grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
           <section aria-label="Layout configuration" className="rounded-xl bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-slate-800">
