@@ -514,7 +514,8 @@ Qualtrics.SurveyEngine.addOnUnload(function()
           <li className="flex gap-2">
             <span className="font-bold shrink-0">1.</span>
             <span>
-              In your Qualtrics survey, click <strong>Survey Flow</strong> in the top navigation bar.
+              In your Qualtrics survey, click <strong>Survey</strong> in the top navigation bar and then <strong>Survey Flow</strong> in the left sidebar.
+. 
             </span>
           </li>
           <li className="flex gap-2">
@@ -535,8 +536,9 @@ Qualtrics.SurveyEngine.addOnUnload(function()
           <li className="flex gap-2">
             <span className="font-bold shrink-0">4.</span>
             <span>
-              Go back to your question. Click the <strong>gear icon</strong> on the question, then choose{" "}
-              <strong>Add JavaScript</strong>. Paste the code above into the editor and click <strong>Save</strong>.
+              Make sure you're in <strong>Survey</strong> in the top nav bar, then click <strong>Builder</strong> on the
+              left sidebar. Under <strong>Question behavior</strong>, click <strong>JavaScript</strong>, then paste in
+              the code above.
             </span>
           </li>
           <li className="flex gap-2">
