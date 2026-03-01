@@ -305,6 +305,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 \t\t\t\t\t\tassignments[key] = activeCategory;
 \t\t\t\t\t\trenderCellContent(cellRef, activeCategory, catColor, catImage);
 \t\t\t\t\t}
+\t\t\t\t	// Save current placements to Qualtrics after every change
+\t\t\t\t	Qualtrics.SurveyEngine.setEmbeddedData("GridAssignments", JSON.stringify(assignments));
 \t\t\t\t};
 \t\t\t})(cell, "r" + row + "-c" + col, isCenter);
 \t\t}
@@ -502,6 +504,59 @@ Qualtrics.SurveyEngine.addOnUnload(function()
           value={qualtricsSnippet}
           onFocus={(e) => e.currentTarget.select()}
         />
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h3 className="text-xs font-semibold text-amber-900">
+          How to connect this to Qualtrics data
+        </h3>
+        <ol className="flex flex-col gap-2 text-xs text-amber-800">
+          <li className="flex gap-2">
+            <span className="font-bold shrink-0">1.</span>
+            <span>
+              In your Qualtrics survey, click <strong>Survey Flow</strong> in the top navigation bar.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold shrink-0">2.</span>
+            <span>
+              Click <strong>Add a New Element Here</strong> and choose <strong>Embedded Data</strong>.
+              Drag it so it appears <em>before</em> the question block that has this grid.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold shrink-0">3.</span>
+            <span>
+              Click <strong>Add a New Field</strong> and type exactly:{" "}
+              <code className="rounded bg-amber-100 px-1 font-mono font-bold">GridAssignments</code>.
+              Leave the value blank. Click <strong>Apply</strong> and save.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold shrink-0">4.</span>
+            <span>
+              Go back to your question. Click the <strong>gear icon</strong> on the question, then choose{" "}
+              <strong>Add JavaScript</strong>. Paste the code above into the editor and click <strong>Save</strong>.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold shrink-0">5.</span>
+            <span>
+              That's it! When a respondent places categories on the grid, their placements are saved automatically.
+              To see the results, go to <strong>Data &amp; Analysis → Export Data</strong>. The{" "}
+              <code className="rounded bg-amber-100 px-1 font-mono font-bold">GridAssignments</code> column
+              will contain each person's placements as JSON — for example:{" "}
+              <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves","r2-c3":"Elves"}`}</code>.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold shrink-0">Tip:</span>
+            <span>
+              If you have multiple grid questions in the same survey, rename the field in step 3 (and in the code) to something unique per question, like{" "}
+              <code className="rounded bg-amber-100 px-1 font-mono">GridAssignments_Q2</code>.
+            </span>
+          </li>
+        </ol>
       </section>
     </section>
   );
