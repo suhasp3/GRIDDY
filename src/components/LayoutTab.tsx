@@ -1,8 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
 import { useEditor } from "../EditorContext";
-
-const numberOrNull = (value: string): number | null =>
-  value === "" ? null : Number(value);
 
 export const LayoutTab: React.FC = () => {
   const {
@@ -12,8 +9,93 @@ export const LayoutTab: React.FC = () => {
 
   const layout = config.layout;
 
+  const [rowsInput, setRowsInput] = useState(String(layout.rows));
+  const [colsInput, setColsInput] = useState(String(layout.cols));
+  const [centerRowInput, setCenterRowInput] = useState(layout.centerRow != null ? String(layout.centerRow) : "");
+  const [centerColInput, setCenterColInput] = useState(layout.centerCol != null ? String(layout.centerCol) : "");
+  const [rowsWarning, setRowsWarning] = useState(false);
+  const [colsWarning, setColsWarning] = useState(false);
+  const [centerRowWarning, setCenterRowWarning] = useState(false);
+  const [centerColWarning, setCenterColWarning] = useState(false);
+
   const updateLayout = (patch: Partial<typeof layout>) => {
     dispatch({ type: "updateLayout", patch });
+  };
+
+  const handleRowsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setRowsInput(raw);
+    if (raw === "") return;
+    const val = Number(raw);
+    if (val > 10) {
+      setRowsWarning(true);
+    } else {
+      setRowsWarning(false);
+      updateLayout({ rows: val });
+    }
+  };
+
+  const handleRowsBlur = () => {
+    if (rowsInput === "" || Number(rowsInput) < 1 || rowsWarning) {
+      setRowsInput(String(layout.rows));
+      setRowsWarning(false);
+    }
+  };
+
+  const handleColsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setColsInput(raw);
+    if (raw === "") return;
+    const val = Number(raw);
+    if (val > 10) {
+      setColsWarning(true);
+    } else {
+      setColsWarning(false);
+      updateLayout({ cols: val });
+    }
+  };
+
+  const handleColsBlur = () => {
+    if (colsInput === "" || Number(colsInput) < 1 || colsWarning) {
+      setColsInput(String(layout.cols));
+      setColsWarning(false);
+    }
+  };
+
+  const handleCenterRowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setCenterRowInput(raw);
+    if (raw === "") {
+      setCenterRowWarning(false);
+      updateLayout({ centerRow: null });
+      return;
+    }
+    const val = Number(raw);
+    const max = layout.rows || 1;
+    if (val > max) {
+      setCenterRowWarning(true);
+    } else {
+      setCenterRowWarning(false);
+      updateLayout({ centerRow: val });
+    }
+  };
+
+  const handleCenterColChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setCenterColInput(raw);
+    if (raw === "") {
+      setCenterColWarning(false);
+      updateLayout({ centerCol: null });
+      return;
+    }
+    const val = Number(raw);
+    const max = layout.cols || 1;
+    if (val > max) {
+      setCenterColWarning(true);
+    } else {
+      setCenterColWarning(false);
+      updateLayout({ centerCol: val });
+    }
   };
 
   return (
@@ -31,29 +113,41 @@ export const LayoutTab: React.FC = () => {
       </label>
 
       <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="font-medium">Rows</span>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            value={layout.rows}
-            onChange={(e) => updateLayout({ rows: Number(e.target.value) })}
-          />
-        </label>
+        <div className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1">
+            <span className="font-medium">Rows</span>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              value={rowsInput}
+              onChange={handleRowsChange}
+              onBlur={handleRowsBlur}
+            />
+          </label>
+          {rowsWarning && (
+            <span className="text-xs text-red-500">Maximum is 10</span>
+          )}
+        </div>
 
-        <label className="flex flex-col gap-1">
-          <span className="font-medium">Columns</span>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            value={layout.cols}
-            onChange={(e) => updateLayout({ cols: Number(e.target.value) })}
-          />
-        </label>
+        <div className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1">
+            <span className="font-medium">Columns</span>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              value={colsInput}
+              onChange={handleColsChange}
+              onBlur={handleColsBlur}
+            />
+          </label>
+          {colsWarning && (
+            <span className="text-xs text-red-500">Maximum is 10</span>
+          )}
+        </div>
       </div>
 
       <fieldset className="rounded-md border border-slate-200 p-4">
@@ -87,39 +181,49 @@ export const LayoutTab: React.FC = () => {
           </label>
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">
-                Center row{" "}
-                <span className="font-normal text-slate-500">(optional)</span>
-              </span>
-              <input
-                type="number"
-                min={1}
-                max={layout.rows || 1}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                value={layout.centerRow ?? ""}
-                onChange={(e) =>
-                  updateLayout({ centerRow: numberOrNull(e.target.value) })
-                }
-              />
-            </label>
+            <div className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">
+                  Center row{" "}
+                  <span className="font-normal text-slate-500">(optional)</span>
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={layout.rows || 1}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  value={centerRowInput}
+                  onChange={handleCenterRowChange}
+                />
+              </label>
+              {centerRowWarning && (
+                <span className="text-xs text-red-500">
+                  Max is {layout.rows}
+                </span>
+              )}
+            </div>
 
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">
-                Center column{" "}
-                <span className="font-normal text-slate-500">(optional)</span>
-              </span>
-              <input
-                type="number"
-                min={1}
-                max={layout.cols || 1}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                value={layout.centerCol ?? ""}
-                onChange={(e) =>
-                  updateLayout({ centerCol: numberOrNull(e.target.value) })
-                }
-              />
-            </label>
+            <div className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">
+                  Center column{" "}
+                  <span className="font-normal text-slate-500">(optional)</span>
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={layout.cols || 1}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  value={centerColInput}
+                  onChange={handleCenterColChange}
+                />
+              </label>
+              {centerColWarning && (
+                <span className="text-xs text-red-500">
+                  Max is {layout.cols}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </fieldset>
