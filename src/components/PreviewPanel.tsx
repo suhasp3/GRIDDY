@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useEditor } from "../EditorContext";
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export const PreviewPanel: React.FC = () => {
   const {
     state: { config },
@@ -36,10 +43,8 @@ export const PreviewPanel: React.FC = () => {
     const row = Math.floor(index / layout.cols) + 1;
     const col = (index % layout.cols) + 1;
 
-    const centerRow =
-      layout.centerRow ?? Math.ceil(layout.rows / 2);
-    const centerCol =
-      layout.centerCol ?? Math.ceil(layout.cols / 2);
+    const centerRow = layout.centerRow ?? Math.ceil(layout.rows / 2);
+    const centerCol = layout.centerCol ?? Math.ceil(layout.cols / 2);
 
     const isCenter =
       layout.includeCenterCell && row === centerRow && col === centerCol;
@@ -62,12 +67,7 @@ export const PreviewPanel: React.FC = () => {
   };
 
   const qualtricsSnippet = useMemo(() => {
-    const exportConfig = {
-      layout,
-      tuning,
-      survey,
-    };
-
+    const exportConfig = { layout, tuning, survey };
     const cfgJson = JSON.stringify(exportConfig, null, 2);
 
     return `Qualtrics.SurveyEngine.addOnload(function()
@@ -99,6 +99,62 @@ Qualtrics.SurveyEngine.addOnReady(function()
 \t\t}
 \t}
 
+\tfunction hexToRgba(hex, alpha) {
+\t\tvar r = parseInt(hex.slice(1, 3), 16);
+\t\tvar g = parseInt(hex.slice(3, 5), 16);
+\t\tvar b = parseInt(hex.slice(5, 7), 16);
+\t\treturn "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+\t}
+
+\tfunction renderCellContent(cellRef, catName, catColor, catImage) {
+\t\tcellRef.innerHTML = "";
+\t\tcellRef.style.display = "flex";
+\t\tcellRef.style.flexDirection = "column";
+\t\tcellRef.style.alignItems = "stretch";
+\t\tcellRef.style.overflow = "hidden";
+\t\tif (catImage) {
+\t\t\tvar imgWrap = document.createElement("div");
+\t\t\timgWrap.style.flex = "1";
+\t\t\timgWrap.style.minHeight = "0";
+\t\t\timgWrap.style.display = "flex";
+\t\t\timgWrap.style.alignItems = "center";
+\t\t\timgWrap.style.justifyContent = "center";
+\t\t\timgWrap.style.overflow = "hidden";
+\t\t\timgWrap.style.padding = "2px";
+\t\t\tvar img = document.createElement("img");
+\t\t\timg.src = catImage;
+\t\t\timg.alt = catName;
+\t\t\timg.style.maxWidth = "100%";
+\t\t\timg.style.maxHeight = "100%";
+\t\t\timg.style.objectFit = "contain";
+\t\t\timgWrap.appendChild(img);
+\t\t\tcellRef.appendChild(imgWrap);
+\t\t}
+\t\tvar textWrap = document.createElement("div");
+\t\tif (catImage) {
+\t\t\ttextWrap.style.flexShrink = "0";
+\t\t\ttextWrap.style.padding = "0 2px 2px";
+\t\t\ttextWrap.style.fontSize = "9px";
+\t\t} else {
+\t\t\ttextWrap.style.flex = "1";
+\t\t\ttextWrap.style.display = "flex";
+\t\t\ttextWrap.style.alignItems = "center";
+\t\t\ttextWrap.style.justifyContent = "center";
+\t\t\ttextWrap.style.padding = "4px";
+\t\t\ttextWrap.style.fontSize = "10px";
+\t\t}
+\t\ttextWrap.style.textAlign = "center";
+\t\ttextWrap.style.lineHeight = "1.2";
+\t\ttextWrap.style.overflow = "hidden";
+\t\ttextWrap.style.textOverflow = "ellipsis";
+\t\ttextWrap.style.whiteSpace = "nowrap";
+\t\ttextWrap.style.fontWeight = "500";
+\t\ttextWrap.textContent = catName;
+\t\tcellRef.appendChild(textWrap);
+\t\tcellRef.style.backgroundColor = hexToRgba(catColor, 0.2);
+\t\tcellRef.style.borderColor = catColor;
+\t}
+
 \t// Question text
 \tvar questionText = document.createElement("p");
 \tquestionText.textContent = cfg.layout.questionText;
@@ -116,38 +172,57 @@ Qualtrics.SurveyEngine.addOnReady(function()
 \t\ttoolbar.style.gap = "4px";
 \t\ttoolbar.style.marginBottom = "6px";
 
-\t\tvar label = document.createElement("span");
-\t\tlabel.textContent = "Placing:";
-\t\tlabel.style.fontSize = "11px";
-\t\tlabel.style.fontWeight = "600";
-\t\tlabel.style.color = "#475569";
-\t\ttoolbar.appendChild(label);
+\t\tvar toolbarLabel = document.createElement("span");
+\t\ttoolbarLabel.textContent = "Placing:";
+\t\ttoolbarLabel.style.fontSize = "11px";
+\t\ttoolbarLabel.style.fontWeight = "600";
+\t\ttoolbarLabel.style.color = "#475569";
+\t\ttoolbar.appendChild(toolbarLabel);
 
 \t\tcategories.forEach(function (cat) {
+\t\t\tvar meta = (cfg.survey.categoryMeta && cfg.survey.categoryMeta[cat]) || {};
+\t\t\tvar catColor = meta.color || "#60a5fa";
+
 \t\t\tvar btn = document.createElement("button");
 \t\t\tbtn.type = "button";
-\t\t\tbtn.textContent = cat;
+\t\t\tbtn.dataset.cat = cat;
+\t\t\tbtn.style.display = "inline-flex";
+\t\t\tbtn.style.alignItems = "center";
+\t\t\tbtn.style.gap = "4px";
 \t\t\tbtn.style.borderRadius = "9999px";
-\t\t\tbtn.style.border = "1px solid #e2e8f0";
+\t\t\tbtn.style.border = cat === activeCategory ? "1px solid " + catColor : "1px solid #e2e8f0";
 \t\t\tbtn.style.padding = "2px 8px";
 \t\t\tbtn.style.fontSize = "11px";
-\t\t\tbtn.style.backgroundColor =
-\t\t\t\tcat === activeCategory ? "#eff6ff" : "#ffffff";
-\t\t\tbtn.style.color =
-\t\t\t\tcat === activeCategory ? "#0369a1" : "#334155";
+\t\t\tbtn.style.backgroundColor = cat === activeCategory ? hexToRgba(catColor, 0.15) : "#ffffff";
+\t\t\tbtn.style.color = "#334155";
 \t\t\tbtn.style.cursor = "pointer";
-\t\t\tbtn.onclick = function () {
-\t\t\t\tactiveCategory = cat;
-\t\t\t\tArray.prototype.forEach.call(
-\t\t\t\t\ttoolbar.querySelectorAll("button"),
-\t\t\t\t\tfunction (other) {
-\t\t\t\t\t\tother.style.backgroundColor =
-\t\t\t\t\t\t\tother.textContent === cat ? "#eff6ff" : "#ffffff";
-\t\t\t\t\t\tother.style.color =
-\t\t\t\t\t\t\tother.textContent === cat ? "#0369a1" : "#334155";
-\t\t\t\t\t},
-\t\t\t\t);
-\t\t\t};
+
+\t\t\tvar dot = document.createElement("span");
+\t\t\tdot.style.display = "inline-block";
+\t\t\tdot.style.width = "8px";
+\t\t\tdot.style.height = "8px";
+\t\t\tdot.style.borderRadius = "9999px";
+\t\t\tdot.style.backgroundColor = catColor;
+\t\t\tdot.style.flexShrink = "0";
+\t\t\tbtn.appendChild(dot);
+\t\t\tbtn.appendChild(document.createTextNode(cat));
+
+\t\t\t(function (c, color) {
+\t\t\t\tbtn.onclick = function () {
+\t\t\t\t\tactiveCategory = c;
+\t\t\t\t\tArray.prototype.forEach.call(
+\t\t\t\t\t\ttoolbar.querySelectorAll("button"),
+\t\t\t\t\t\tfunction (other) {
+\t\t\t\t\t\t\tvar otherMeta = (cfg.survey.categoryMeta && cfg.survey.categoryMeta[other.dataset.cat]) || {};
+\t\t\t\t\t\t\tvar otherColor = otherMeta.color || "#60a5fa";
+\t\t\t\t\t\t\tvar isActive = other.dataset.cat === c;
+\t\t\t\t\t\t\tother.style.backgroundColor = isActive ? hexToRgba(otherColor, 0.15) : "#ffffff";
+\t\t\t\t\t\t\tother.style.borderColor = isActive ? otherColor : "#e2e8f0";
+\t\t\t\t\t\t},
+\t\t\t\t\t);
+\t\t\t\t};
+\t\t\t})(cat, catColor);
+
 \t\t\ttoolbar.appendChild(btn);
 \t\t});
 
@@ -178,6 +253,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 \tgrid.style.height = "100%";
 \tgrid.style.boxSizing = "border-box";
 \tgrid.style.gridTemplateColumns = "repeat(" + cfg.layout.cols + ", minmax(0, 1fr))";
+\tgrid.style.gridTemplateRows = "repeat(" + cfg.layout.rows + ", minmax(0, 1fr))";
 \tgrid.style.gap = cfg.tuning.gridGap + "px";
 \tgrid.style.padding = cfg.tuning.gridPadding + "px";
 
@@ -197,9 +273,10 @@ Qualtrics.SurveyEngine.addOnReady(function()
 \t\tcell.style.borderRadius = "0.375rem";
 \t\tcell.style.border = "1px solid #cbd5e1";
 \t\tcell.style.backgroundColor = isCenter ? "#e0f2fe" : "#ffffff";
-\t\tcell.style.fontSize = "12px";
+\t\tcell.style.fontSize = "10px";
 \t\tcell.style.fontWeight = "500";
 \t\tcell.style.color = "#0f172a";
+\t\tcell.style.overflow = "hidden";
 
 \t\tif (isCenter) {
 \t\t\tcell.textContent = cfg.layout.centerCellLabel || "Your House";
@@ -211,19 +288,22 @@ Qualtrics.SurveyEngine.addOnReady(function()
 \t\t\t(function (cellRef, key, isCenterCell) {
 \t\t\t\tcellRef.onclick = function () {
 \t\t\t\t\tif (!activeCategory) return;
+\t\t\t\t\tvar meta = (cfg.survey.categoryMeta && cfg.survey.categoryMeta[activeCategory]) || {};
+\t\t\t\t\tvar catColor = meta.color || "#60a5fa";
+\t\t\t\t\tvar catImage = meta.imageUrl || "";
 \t\t\t\t\tvar current = assignments[key];
 \t\t\t\t\tif (current === activeCategory) {
 \t\t\t\t\t\tdelete assignments[key];
-\t\t\t\t\t\tcellRef.textContent = isCenterCell
-\t\t\t\t\t\t\t? (cfg.layout.centerCellLabel || "Your House")
-\t\t\t\t\t\t\t: "";
+\t\t\t\t\t\tcellRef.style.display = "flex";
+\t\t\t\t\t\tcellRef.style.flexDirection = "row";
+\t\t\t\t\t\tcellRef.style.alignItems = "center";
+\t\t\t\t\t\tcellRef.style.justifyContent = "center";
+\t\t\t\t\t\tcellRef.innerHTML = isCenterCell ? (cfg.layout.centerCellLabel || "Your House") : "";
 \t\t\t\t\t\tcellRef.style.backgroundColor = isCenterCell ? "#e0f2fe" : "#ffffff";
 \t\t\t\t\t\tcellRef.style.borderColor = isCenterCell ? "#38bdf8" : "#cbd5e1";
 \t\t\t\t\t} else {
 \t\t\t\t\t\tassignments[key] = activeCategory;
-\t\t\t\t\t\tcellRef.textContent = activeCategory;
-\t\t\t\t\t\tcellRef.style.backgroundColor = "#e0f2fe";
-\t\t\t\t\t\tcellRef.style.borderColor = "#38bdf8";
+\t\t\t\t\t\trenderCellContent(cellRef, activeCategory, catColor, catImage);
 \t\t\t\t\t}
 \t\t\t\t};
 \t\t\t})(cell, "r" + row + "-c" + col, isCenter);
@@ -274,20 +354,36 @@ Qualtrics.SurveyEngine.addOnUnload(function()
             Placing:
           </span>
           <div className="flex flex-wrap gap-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategory(cat)}
-                className={`rounded-full border px-2.5 py-0.5 text-xs ${
-                  activeCategory === cat
-                    ? "border-sky-500 bg-sky-50 text-sky-700 shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setActiveCategory(cat)}
+                  className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
+                    activeCategory === cat
+                      ? "shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  style={
+                    activeCategory === cat
+                      ? {
+                          borderColor: color,
+                          backgroundColor: hexToRgba(color, 0.1),
+                          color: "#0f172a",
+                        }
+                      : {}
+                  }
+                >
+                  <span
+                    className="h-2 w-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  {cat}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -313,31 +409,77 @@ Qualtrics.SurveyEngine.addOnUnload(function()
           className="grid h-full w-full"
           style={{
             gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
             gap: tuning.gridGap,
             padding: tuning.gridPadding,
           }}
         >
-          {cells.map((cell) => (
-            <div
-              key={cell.key}
-              onClick={() => handleCellClick(cell.key)}
-              className={`flex items-center justify-center rounded-md border text-xs font-medium ${
-                survey.allowInteraction ? "cursor-pointer transition-colors" : ""
-              } ${
-                assignments[cell.key]
-                  ? "bg-sky-100 border-sky-500 text-slate-900"
-                  : cell.isCenter
-                  ? "bg-sky-50 border-sky-400 text-slate-800"
-                  : "bg-white border-slate-300 text-slate-800"
-              }`}
-            >
-              {assignments[cell.key]
-                ? assignments[cell.key]
-                : cell.isCenter
-                ? layout.centerCellLabel || "Your House"
-                : ""}
-            </div>
-          ))}
+          {cells.map((cell) => {
+            const assignedCat = assignments[cell.key];
+            const catMeta = assignedCat
+              ? survey.categoryMeta[assignedCat]
+              : null;
+            const catColor = catMeta?.color ?? "#60a5fa";
+            const catImage = catMeta?.imageUrl ?? "";
+
+            return (
+              <div
+                key={cell.key}
+                onClick={() => handleCellClick(cell.key)}
+                className={`flex flex-col rounded-md border overflow-hidden font-medium ${
+                  survey.allowInteraction ? "cursor-pointer transition-colors" : ""
+                }`}
+                style={
+                  assignedCat
+                    ? {
+                        backgroundColor: hexToRgba(catColor, 0.2),
+                        borderColor: catColor,
+                        color: "#0f172a",
+                      }
+                    : cell.isCenter
+                    ? {
+                        backgroundColor: "#f0f9ff",
+                        borderColor: "#38bdf8",
+                        color: "#0f172a",
+                      }
+                    : {
+                        backgroundColor: "#ffffff",
+                        borderColor: "#cbd5e1",
+                        color: "#1e293b",
+                      }
+                }
+              >
+                {assignedCat ? (
+                  <>
+                    {catImage && (
+                      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-0.5">
+                        <img
+                          src={catImage}
+                          alt={assignedCat}
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    <div
+                      className={`flex-shrink-0 w-full text-center leading-tight truncate px-0.5 ${
+                        catImage
+                          ? "text-[9px] pb-0.5"
+                          : "flex-1 flex items-center justify-center text-[10px] p-1"
+                      }`}
+                    >
+                      {assignedCat}
+                    </div>
+                  </>
+                ) : cell.isCenter ? (
+                  <div className="flex-1 flex items-center justify-center p-1">
+                    <span className="w-full text-center text-[10px] leading-tight break-words">
+                      {layout.centerCellLabel || "Your House"}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -366,4 +508,3 @@ Qualtrics.SurveyEngine.addOnUnload(function()
 };
 
 export default PreviewPanel;
-

@@ -21,11 +21,20 @@ export interface TuningConfig {
   previewHeight: number;
 }
 
+export interface CategoryMeta {
+  color: string;    // hex color, e.g. "#f87171"
+  imageUrl: string; // optional image URL shown in cell
+}
+
 export interface SurveyConfig {
   /** Comma-separated list of category labels, e.g. "Dwarves, Elves, Hobbits" */
   categoriesCsv: string;
   /** Whether participants can interact with the grid (vs static display only). */
   allowInteraction: boolean;
+  /** Whether the advanced per-category customization panel is expanded. */
+  advancedCategories: boolean;
+  /** Per-category color and image metadata, keyed by category name. */
+  categoryMeta: Record<string, CategoryMeta>;
 }
 
 export interface GridConfig {

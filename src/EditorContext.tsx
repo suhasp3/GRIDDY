@@ -1,10 +1,57 @@
 import React, { createContext, useContext, useMemo, useReducer } from "react";
 import {
+  CategoryMeta,
   GridConfig,
   LayoutConfig,
   SurveyConfig,
   TuningConfig,
 } from "./grid-types";
+
+const CATEGORY_PALETTE = [
+  "#f87171", // red
+  "#60a5fa", // blue
+  "#4ade80", // green
+  "#fb923c", // orange
+  "#c084fc", // purple
+  "#facc15", // yellow
+  "#22d3ee", // cyan
+  "#f472b6", // pink
+  "#a3e635", // lime
+  "#fb7185", // rose
+];
+
+/** Sync categoryMeta when the CSV changes: keep existing entries, add new ones with palette colors. */
+function syncCategoryMeta(
+  csv: string,
+  existing: Record<string, CategoryMeta>,
+): Record<string, CategoryMeta> {
+  const names = csv
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  const usedColors = new Set(Object.values(existing).map((m) => m.color));
+  let paletteIdx = 0;
+
+  const next: Record<string, CategoryMeta> = {};
+  for (const name of names) {
+    if (existing[name]) {
+      next[name] = existing[name];
+    } else {
+      while (
+        paletteIdx < CATEGORY_PALETTE.length &&
+        usedColors.has(CATEGORY_PALETTE[paletteIdx])
+      ) {
+        paletteIdx++;
+      }
+      const color = CATEGORY_PALETTE[paletteIdx % CATEGORY_PALETTE.length];
+      usedColors.add(color);
+      paletteIdx++;
+      next[name] = { color, imageUrl: "" };
+    }
+  }
+  return next;
+}
 
 interface EditorState {
   config: GridConfig;
@@ -42,9 +89,12 @@ function createDefaultConfig(): GridConfig {
     previewHeight: 550,
   };
 
+  const defaultCsv = "Dwarves, Elves, Hobbits, Rohirrim";
   const survey: SurveyConfig = {
-    categoriesCsv: "Dwarves, Elves, Hobbits, Rohirrim",
+    categoriesCsv: defaultCsv,
     allowInteraction: true,
+    advancedCategories: false,
+    categoryMeta: syncCategoryMeta(defaultCsv, {}),
   };
 
   return {
@@ -74,13 +124,16 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           tuning: { ...state.config.tuning, ...action.patch },
         },
       };
-    case "updateSurvey":
-      return {
-        config: {
-          ...state.config,
-          survey: { ...state.config.survey, ...action.patch },
-        },
-      };
+    case "updateSurvey": {
+      const merged = { ...state.config.survey, ...action.patch };
+      if (action.patch.categoriesCsv !== undefined) {
+        merged.categoryMeta = syncCategoryMeta(
+          action.patch.categoriesCsv,
+          merged.categoryMeta,
+        );
+      }
+      return { config: { ...state.config, survey: merged } };
+    }
     default:
       return state;
   }
