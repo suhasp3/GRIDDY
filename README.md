@@ -1,7 +1,3 @@
-# React + TypeScript + Vite + TailwindCSS + Shadcn UI + React Router v6 Boilerplate
-
-This project is a boilerplate for a React application using TypeScript, Vite, TailwindCSS, Shadcn UI, and React Router v6.
-
 ## Getting Started
 
 1. Clone the repository.
