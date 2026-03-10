@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useEditor } from "../EditorContext";
 
 export const LayoutTab: React.FC = () => {
@@ -17,6 +17,18 @@ export const LayoutTab: React.FC = () => {
   const [colsWarning, setColsWarning] = useState(false);
   const [centerRowWarning, setCenterRowWarning] = useState(false);
   const [centerColWarning, setCenterColWarning] = useState(false);
+
+  // Sync local input strings whenever the config is replaced (new survey or load from history).
+  useEffect(() => {
+    setRowsInput(String(layout.rows));
+    setColsInput(String(layout.cols));
+    setCenterRowInput(layout.centerRow != null ? String(layout.centerRow) : "");
+    setCenterColInput(layout.centerCol != null ? String(layout.centerCol) : "");
+    setRowsWarning(false);
+    setColsWarning(false);
+    setCenterRowWarning(false);
+    setCenterColWarning(false);
+  }, [config.id]); // config.id changes on newSurvey and loadSurvey
 
   const updateLayout = (patch: Partial<typeof layout>) => {
     dispatch({ type: "updateLayout", patch });

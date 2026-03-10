@@ -55,13 +55,16 @@ function syncCategoryMeta(
 
 interface EditorState {
   config: GridConfig;
+  savedSurveyId: string | null;
 }
 
 type EditorAction =
   | { type: "setConfig"; config: GridConfig }
   | { type: "updateLayout"; patch: Partial<LayoutConfig> }
   | { type: "updateTuning"; patch: Partial<TuningConfig> }
-  | { type: "updateSurvey"; patch: Partial<SurveyConfig> };
+  | { type: "updateSurvey"; patch: Partial<SurveyConfig> }
+  | { type: "markSaved" }
+  | { type: "newSurvey" };
 
 const EditorContext = createContext<
   { state: EditorState; dispatch: React.Dispatch<EditorAction> } | undefined
@@ -99,7 +102,7 @@ function createDefaultConfig(): GridConfig {
 
   return {
     id: crypto.randomUUID(),
-    name: "Task 1",
+    name: "",
     layout,
     tuning,
     survey,
@@ -109,9 +112,14 @@ function createDefaultConfig(): GridConfig {
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case "setConfig":
-      return { config: action.config };
+      return { ...state, config: action.config };
+    case "markSaved":
+      return { ...state, savedSurveyId: state.config.id };
+    case "newSurvey":
+      return { config: createDefaultConfig(), savedSurveyId: null };
     case "updateLayout":
       return {
+        ...state,
         config: {
           ...state.config,
           layout: { ...state.config.layout, ...action.patch },
@@ -119,6 +127,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       };
     case "updateTuning":
       return {
+        ...state,
         config: {
           ...state.config,
           tuning: { ...state.config.tuning, ...action.patch },
@@ -132,7 +141,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           merged.categoryMeta,
         );
       }
-      return { config: { ...state.config, survey: merged } };
+      return { ...state, config: { ...state.config, survey: merged } };
     }
     default:
       return state;
@@ -144,6 +153,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [state, dispatch] = useReducer(editorReducer, {
     config: createDefaultConfig(),
+    savedSurveyId: null,
   });
 
   const value = useMemo(() => ({ state, dispatch }), [state]);

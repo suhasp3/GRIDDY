@@ -5,6 +5,8 @@ import App from "./App.tsx";
 import Providers from "./components/Providers.tsx";
 import "./index.css";
 import ErrorPage from "./pages/error-page.tsx";
+import HistoryPage from "./pages/HistoryPage.tsx";
+import AuthPage from "./pages/AuthPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -15,6 +17,14 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <App />,
+      },
+      {
+        path: "history",
+        element: <HistoryPage />,
+      },
+      {
+        path: "auth",
+        element: <AuthPage />,
       },
     ],
   },
