@@ -7,6 +7,7 @@ import "./index.css";
 import ErrorPage from "./pages/error-page.tsx";
 import HistoryPage from "./pages/HistoryPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
+import ProfilePage from "./pages/ProfilePage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: "auth",
         element: <AuthPage />,
+      },
+      {
+        path: "profile",
+        element: <ProfilePage />,
       },
     ],
   },

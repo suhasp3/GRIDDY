@@ -14,6 +14,10 @@ function App() {
   const navigate = useNavigate();
   const { state, dispatch } = useEditor();
 
+  const firstName = (user?.user_metadata?.first_name as string | undefined)?.trim();
+  const lastName = (user?.user_metadata?.last_name as string | undefined)?.trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+
   return (
     <FlexContainer
       variant="column-start"
@@ -50,7 +54,14 @@ function App() {
           <SaveButton />
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600 truncate max-w-[160px]">{user.email}</span>
+              <button
+                type="button"
+                onClick={() => navigate("/profile")}
+                className="max-w-[160px] truncate text-sm text-slate-600 hover:text-slate-900"
+                title="View profile"
+              >
+                {fullName || user.email}
+              </button>
               <button
                 type="button"
                 onClick={() => signOut()}

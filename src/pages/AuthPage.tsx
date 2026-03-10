@@ -6,6 +6,8 @@ export default function AuthPage() {
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -14,8 +16,16 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedEmail || !password) {
       setError("Please enter your email and password.");
+      return;
+    }
+    if (mode === "signup" && (!trimmedFirstName || !trimmedLastName)) {
+      setError("Please enter your first name and last name.");
       return;
     }
     setError(null);
@@ -23,10 +33,10 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signin") {
-        await signInWithEmail(email, password);
+        await signInWithEmail(trimmedEmail, password);
         navigate("/");
       } else {
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(trimmedEmail, password, trimmedFirstName, trimmedLastName);
         setMessage("Account created! Check your email to confirm, then sign in.");
       }
     } catch (e) {
@@ -44,12 +54,43 @@ export default function AuthPage() {
         </h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {mode === "signup" && (
+            <>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-700">First Name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required={mode === "signup"}
+                  autoComplete="given-name"
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  placeholder="Jane"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-700">Last Name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required={mode === "signup"}
+                  autoComplete="family-name"
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  placeholder="Doe"
+                />
+              </div>
+            </>
+          )}
+
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
               autoComplete="email"
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
               placeholder="you@example.com"
@@ -62,6 +103,7 @@ export default function AuthPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
               placeholder="••••••••"

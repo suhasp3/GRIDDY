@@ -45,3 +45,13 @@ export async function deleteSurvey(id: string): Promise<void> {
   const { error } = await supabase.from("surveys").delete().eq("id", id);
   if (error) throw error;
 }
+
+export async function getActiveSurveyQuestionCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("surveys")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  return count ?? 0;
+}

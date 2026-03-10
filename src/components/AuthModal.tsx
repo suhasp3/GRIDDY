@@ -18,23 +18,33 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedEmail || !password) {
       setError("Please enter your email and password.");
+      return;
+    }
+    if (mode === "signup" && (!trimmedFirstName || !trimmedLastName)) {
+      setError("Please enter your first name and last name.");
       return;
     }
     setError(null);
     setLoading(true);
     try {
       if (mode === "signin") {
-        await signInWithEmail(email, password);
+        await signInWithEmail(trimmedEmail, password);
       } else {
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(trimmedEmail, password, trimmedFirstName, trimmedLastName);
         setError("Account created! Check your email to confirm before signing in.");
         setLoading(false);
         return;
@@ -53,12 +63,33 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       <ModalContent>
         <ModalHeader>{mode === "signin" ? "Sign In" : "Sign Up"}</ModalHeader>
         <ModalBody className="gap-3">
+          {mode === "signup" && (
+            <>
+              <Input
+                label="First Name"
+                type="text"
+                value={firstName}
+                onValueChange={setFirstName}
+                autoComplete="given-name"
+                isRequired
+              />
+              <Input
+                label="Last Name"
+                type="text"
+                value={lastName}
+                onValueChange={setLastName}
+                autoComplete="family-name"
+                isRequired
+              />
+            </>
+          )}
           <Input
             label="Email"
             type="email"
             value={email}
             onValueChange={setEmail}
             autoComplete="email"
+            isRequired
           />
           <Input
             label="Password"
@@ -66,6 +97,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             value={password}
             onValueChange={setPassword}
             autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            isRequired
           />
           {error && <p className="text-sm text-danger">{error}</p>}
         </ModalBody>
