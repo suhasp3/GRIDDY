@@ -66,6 +66,7 @@ export const PreviewPanel: React.FC = () => {
   );
 
   const [copied, setCopied] = useState(false);
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
@@ -587,9 +588,10 @@ Qualtrics.SurveyEngine.addOnUnload(function()
   };
 
   return (
+    <>
     <section
       aria-label="Grid preview"
-      className="flex h-full flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="flex h-full min-h-0 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:overflow-hidden"
     >
       <header className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-800">Live preview</h2>
@@ -698,7 +700,7 @@ Qualtrics.SurveyEngine.addOnUnload(function()
       <p className="text-sm text-slate-700">{layout.questionText}</p>
 
       <div
-        className="relative w-full overflow-hidden rounded-md border border-slate-200 bg-slate-50"
+        className="relative min-h-0 w-full flex-1 overflow-hidden rounded-md border border-slate-200 bg-slate-50"
         style={{
           width: "100%",
           aspectRatio: `${tuning.previewWidth} / ${tuning.previewHeight}`,
@@ -833,81 +835,101 @@ Qualtrics.SurveyEngine.addOnUnload(function()
         </div>
       </div>
 
-      <section className="mt-4 flex flex-col gap-2">
-        <header className="flex items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold text-slate-700">
-            Qualtrics JavaScript (copy into Question JS)
-          </h3>
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        </header>
-        <textarea
-          className="h-64 w-full resize-none rounded-md border border-slate-200 bg-slate-950/90 p-2 font-mono text-[11px] text-slate-50 shadow-inner"
-          readOnly
-          value={qualtricsSnippet}
-          onFocus={(e) => e.currentTarget.select()}
-        />
-      </section>
-
-      <section className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-        <h3 className="text-xs font-semibold text-amber-900">
-          How to connect this to Qualtrics data
-        </h3>
-        <ol className="flex flex-col gap-2 text-xs text-amber-800">
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold">1.</span>
-            <span>
-              In your Qualtrics survey, click <strong>Survey</strong> in the top navigation bar and then <strong>Survey Flow</strong> in the left sidebar.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold">2.</span>
-            <span>
-              Click <strong>Add a New Element Here</strong> and choose <strong>Embedded Data</strong>.
-              Drag it so it appears <em>before</em> the question block that has this grid.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold">3.</span>
-            <span>
-              Click <strong>Add a New Field</strong> and type exactly:{" "}
-              <code className="rounded bg-amber-100 px-1 font-mono font-bold">GridAssignments</code>.
-              Leave the value blank. Click <strong>Apply</strong> and save.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold">4.</span>
-            <span>
-              Make sure you're in <strong>Survey</strong> in the top nav bar, then click <strong>Builder</strong> on the
-              left sidebar. Under <strong>Question behavior</strong>, click <strong>JavaScript</strong>, then paste in
-              the code above.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold">5.</span>
-            <span>
-              That's it! No matter which interaction mode you choose, placements are saved automatically.
-              To see the results, go to <strong>Data &amp; Analysis → Export Data</strong>. The{" "}
-              <code className="rounded bg-amber-100 px-1 font-mono font-bold">GridAssignments</code> column
-              will contain each person's placements as JSON, for example{" "}
-              <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves","r2-c3":"Elves"}`}</code>.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold">Tip:</span>
-            <span>
-              If you have multiple grid questions in the same survey, rename the field in step 3 (and in the code) to something unique per question, like{" "}
-              <code className="rounded bg-amber-100 px-1 font-mono">GridAssignments_Q2</code>.
-            </span>
-          </li>
-        </ol>
-      </section>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setIsCodeModalOpen(true)}
+          className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+        >
+          Export to Qualtrics
+        </button>
+      </div>
     </section>
+    {isCodeModalOpen && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Qualtrics JavaScript"
+        onClick={() => setIsCodeModalOpen(false)}
+      >
+        <div
+          className="flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-slate-900">
+                Export to Qualtrics
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCodeModalOpen(false)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              >
+                Close
+              </button>
+            </div>
+          </header>
+          <div className="grid min-h-0 flex-1 gap-4 overflow-auto p-5 lg:grid-cols-[minmax(0,1.2fr)_320px]">
+            <div className="min-h-0">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                    <span className="font-mono text-base">{`</>`}</span>
+                    <span>Code</span>
+                  </div>
+                </div>
+                <textarea
+                  className="h-[52vh] w-full resize-none rounded-xl border border-slate-200 bg-slate-950/90 p-3 font-mono text-[11px] text-slate-50 shadow-inner"
+                  readOnly
+                  value={qualtricsSnippet}
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+              </div>
+            </div>
+            <aside className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+              <h4 className="text-sm font-semibold">Qualtrics setup</h4>
+              <ol className="flex flex-col gap-2">
+                <li>
+                  In Qualtrics, open <strong>Survey</strong>, then <strong>Survey Flow</strong>.
+                </li>
+                <li>
+                  Add an <strong>Embedded Data</strong> element before this question.
+                </li>
+                <li>
+                  Create a field named{" "}
+                  <code className="rounded bg-amber-100 px-1 font-mono font-bold">GridAssignments</code>{" "}
+                  and leave it blank.
+                </li>
+                <li>
+                  Go back to the question, open <strong>JavaScript</strong> under question behavior, and paste the code.
+                </li>
+                <li>
+                  Export results from <strong>Data &amp; Analysis</strong>. Responses are saved as JSON like{" "}
+                  <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>.
+                </li>
+              </ol>
+              <p>
+                If you have multiple grid questions, rename the embedded field to something unique like{" "}
+                <code className="rounded bg-amber-100 px-1 font-mono">GridAssignments_Q2</code>
+                .
+              </p>
+            </aside>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
