@@ -1,6 +1,24 @@
 import React from "react";
 import { useEditor } from "../EditorContext";
 
+const selectionModeOptions = [
+  {
+    value: "paint",
+    label: "Select then click",
+    description: "Pick a label first, then click cells to place or remove it.",
+  },
+  {
+    value: "dropdown",
+    label: "Dropdown per cell",
+    description: "Each cell gets its own dropdown so every choice is explicit.",
+  },
+  {
+    value: "dragdrop",
+    label: "Drag and drop",
+    description: "Drag labels onto cells for a slower, more intentional flow.",
+  },
+] as const;
+
 export const SurveyTab: React.FC = () => {
   const {
     state: { config },
@@ -39,6 +57,41 @@ export const SurveyTab: React.FC = () => {
           </span>
         </span>
       </label>
+
+      {survey.allowInteraction && (
+        <fieldset className="rounded-md border border-slate-200 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-700">
+            Selection mode
+          </legend>
+          <div className="mt-2 flex flex-col gap-2">
+            {selectionModeOptions.map((option) => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 hover:border-slate-300 hover:bg-slate-50"
+              >
+                <input
+                  type="radio"
+                  name="selectionMode"
+                  value={option.value}
+                  checked={survey.selectionMode === option.value}
+                  onChange={() =>
+                    updateSurvey({ selectionMode: option.value })
+                  }
+                  className="mt-1 h-4 w-4 border-slate-300"
+                />
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-slate-800">
+                    {option.label}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <label className="flex flex-col gap-1">
         <span className="font-medium text-sm">
