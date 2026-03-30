@@ -26,11 +26,15 @@ export interface CategoryMeta {
   imageUrl: string; // optional image URL shown in cell
 }
 
+export type SelectionMode = "paint" | "dropdown" | "dragdrop";
+
 export interface SurveyConfig {
   /** Comma-separated list of category labels, e.g. "Dwarves, Elves, Hobbits" */
   categoriesCsv: string;
   /** Whether participants can interact with the grid (vs static display only). */
   allowInteraction: boolean;
+  /** How respondents assign labels to cells when interaction is enabled. */
+  selectionMode: SelectionMode;
   /** Whether the advanced per-category customization panel is expanded. */
   advancedCategories: boolean;
   /** Per-category color and image metadata, keyed by category name. */
@@ -44,4 +48,3 @@ export interface GridConfig {
   tuning: TuningConfig;
   survey: SurveyConfig;
 }
-

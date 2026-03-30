@@ -53,6 +53,21 @@ function syncCategoryMeta(
   return next;
 }
 
+function normalizeConfig(config: GridConfig): GridConfig {
+  const categoriesCsv = config.survey.categoriesCsv ?? "";
+  return {
+    ...config,
+    survey: {
+      ...config.survey,
+      selectionMode: config.survey.selectionMode ?? "paint",
+      categoryMeta: syncCategoryMeta(
+        categoriesCsv,
+        config.survey.categoryMeta ?? {},
+      ),
+    },
+  };
+}
+
 interface EditorState {
   config: GridConfig;
   savedSurveyId: string | null;
@@ -96,6 +111,7 @@ function createDefaultConfig(): GridConfig {
   const survey: SurveyConfig = {
     categoriesCsv: defaultCsv,
     allowInteraction: true,
+    selectionMode: "paint",
     advancedCategories: false,
     categoryMeta: syncCategoryMeta(defaultCsv, {}),
   };
@@ -112,7 +128,7 @@ function createDefaultConfig(): GridConfig {
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case "setConfig":
-      return { ...state, config: action.config };
+      return { ...state, config: normalizeConfig(action.config) };
     case "markSaved":
       return { ...state, savedSurveyId: state.config.id };
     case "newSurvey":
@@ -170,4 +186,3 @@ export function useEditor() {
   }
   return ctx;
 }
-

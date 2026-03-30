@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 interface AuthContextValue {
@@ -34,14 +34,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // an email confirmation link (token is parsed from the URL hash by
     // the Supabase client automatically).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (_event: AuthChangeEvent, session: Session | null) => {
         setUser(session?.user ?? null);
         setLoading(false);
       },
     );
 
     // Also check for an existing session on mount (covers page refresh).
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
