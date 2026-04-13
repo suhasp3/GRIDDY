@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useEditor } from "../EditorContext";
-import { SelectionMode } from "../grid-types";
+import { SelectionMode, WeightEntry } from "../grid-types";
 import { buildQualtricsSnippet } from "../lib/qualtricsExport";
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -47,12 +47,73 @@ function renderAssignedContent(category: string, imageUrl: string) {
   );
 }
 
+// --- Experimental utility functions ---
+
+interface CellInfo {
+  row: number;
+  col: number;
+  isCenter: boolean;
+  key: string;        // ephemeral key: "row-col"
+  exportKey: string;  // persistent key: "rRow-cCol"
+}
+
+function computeShuffle(
+  fixedAssignments: Record<string, string>,
+  cells: CellInfo[],
+): Record<string, string> {
+  const nonCenterKeys = cells.filter((c) => !c.isCenter).map((c) => c.exportKey);
+  const assignedKeys = nonCenterKeys.filter((k) => fixedAssignments[k]);
+  const values = assignedKeys.map((k) => fixedAssignments[k]);
+
+  // Fisher-Yates shuffle
+  const shuffled = [...values];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const result: Record<string, string> = { ...fixedAssignments };
+  assignedKeys.forEach((key, idx) => {
+    result[key] = shuffled[idx];
+  });
+  return result;
+}
+
+function computeWeightedSample(
+  weightedEntries: WeightEntry[],
+  cells: CellInfo[],
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  const totalWeight = weightedEntries.reduce((s, e) => s + e.weight, 0);
+  if (totalWeight === 0 || weightedEntries.length === 0) return result;
+
+  // Build CDF
+  let cum = 0;
+  const cdf = weightedEntries.map((e) => {
+    cum += e.weight / totalWeight;
+    return { category: e.category, cumulative: cum };
+  });
+
+  for (const cell of cells) {
+    if (cell.isCenter) continue;
+    const rand = Math.random();
+    const picked = cdf.find((entry) => rand <= entry.cumulative);
+    if (picked) result[cell.exportKey] = picked.category;
+  }
+  return result;
+}
+
+// --- Main component ---
+
 export const PreviewPanel: React.FC = () => {
   const {
     state: { config },
+    dispatch,
   } = useEditor();
 
   const { layout, tuning, survey } = config;
+  const experimental = config.experimental!;
+  const expEnabled = experimental.enabled;
 
   const categories = useMemo(
     () =>
@@ -63,12 +124,27 @@ export const PreviewPanel: React.FC = () => {
     [survey.categoriesCsv],
   );
 
+  const responseLabels = useMemo(
+    () =>
+      experimental.responseLabelsCsv
+        .split(",")
+        .map((l) => l.trim())
+        .filter(Boolean),
+    [experimental.responseLabelsCsv],
+  );
+
   const [copied, setCopied] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+
+  // Experimental mode state
+  const [experimentalTab, setExperimentalTab] = useState<"setup" | "respondent">("setup");
+  const [responses, setResponses] = useState<Record<string, string>>({});
+  const [weightedPreview, setWeightedPreview] = useState<Record<string, string>>({});
+  const [shuffleSnapshot, setShuffleSnapshot] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!categories.length) {
@@ -84,59 +160,137 @@ export const PreviewPanel: React.FC = () => {
     setAssignments({});
     setDraggedCategory(null);
     setDragOverCell(null);
+    setResponses({});
+    setShuffleSnapshot({});
+    setWeightedPreview({});
+    setExperimentalTab("setup");
   }, [config.id, survey.selectionMode, survey.categoriesCsv]);
 
   const totalCells = layout.rows * layout.cols;
-  const cells = Array.from({ length: totalCells }, (_, index) => {
-    const row = Math.floor(index / layout.cols) + 1;
-    const col = (index % layout.cols) + 1;
-
-    const centerRow = layout.centerRow ?? Math.ceil(layout.rows / 2);
-    const centerCol = layout.centerCol ?? Math.ceil(layout.cols / 2);
-
-    const isCenter =
-      layout.includeCenterCell && row === centerRow && col === centerCol;
-
-    return { row, col, isCenter, key: `${row}-${col}` };
-  });
+  const cells: CellInfo[] = useMemo(
+    () =>
+      Array.from({ length: totalCells }, (_, index) => {
+        const row = Math.floor(index / layout.cols) + 1;
+        const col = (index % layout.cols) + 1;
+        const centerRow = layout.centerRow ?? Math.ceil(layout.rows / 2);
+        const centerCol = layout.centerCol ?? Math.ceil(layout.cols / 2);
+        const isCenter =
+          layout.includeCenterCell && row === centerRow && col === centerCol;
+        return {
+          row,
+          col,
+          isCenter,
+          key: `${row}-${col}`,
+          exportKey: `r${row}-c${col}`,
+        };
+      }),
+    [totalCells, layout],
+  );
 
   const lockedCellKeys = useMemo(
     () => new Set(cells.filter((cell) => cell.isCenter).map((cell) => cell.key)),
     [cells],
   );
 
-  const applyAssignment = (key: string, category: string | null) => {
-    setAssignments((prev) => {
-      const next = { ...prev };
-      if (!category) {
-        delete next[key];
-      } else {
-        next[key] = category;
-      }
-      return next;
-    });
-  };
+  // Generate weighted preview whenever entries or cells change
+  useEffect(() => {
+    if (expEnabled && experimental.prefillMode === "weighted") {
+      setWeightedPreview(computeWeightedSample(experimental.weightedEntries, cells));
+    }
+  }, [expEnabled, experimental.prefillMode, experimental.weightedEntries, cells]);
 
-  const handlePaintCellClick = (key: string) => {
+  // Derive what to display in cells
+  const displayAssignments = useMemo<Record<string, string>>(() => {
+    if (!expEnabled) return assignments;
+    if (experimentalTab === "setup") {
+      if (experimental.prefillMode === "weighted") return weightedPreview;
+      return experimental.fixedAssignments;
+    }
+    // respondent tab
+    if (experimental.prefillMode === "shuffle") return shuffleSnapshot;
+    if (experimental.prefillMode === "weighted") return weightedPreview;
+    return experimental.fixedAssignments;
+  }, [
+    expEnabled,
+    experimentalTab,
+    experimental.prefillMode,
+    experimental.fixedAssignments,
+    assignments,
+    weightedPreview,
+    shuffleSnapshot,
+  ]);
+
+  const applyAssignment = useCallback(
+    (exportKey: string, ephemeralKey: string, category: string | null) => {
+      if (
+        expEnabled &&
+        experimentalTab === "setup" &&
+        experimental.prefillMode !== "weighted"
+      ) {
+        // Persist to config
+        const next = { ...experimental.fixedAssignments };
+        if (!category) {
+          delete next[exportKey];
+        } else {
+          next[exportKey] = category;
+        }
+        dispatch({ type: "updateExperimental", patch: { fixedAssignments: next } });
+      } else {
+        setAssignments((prev) => {
+          const next = { ...prev };
+          if (!category) {
+            delete next[ephemeralKey];
+          } else {
+            next[ephemeralKey] = category;
+          }
+          return next;
+        });
+      }
+    },
+    [expEnabled, experimentalTab, experimental.prefillMode, experimental.fixedAssignments, dispatch],
+  );
+
+  const handlePaintCellClick = (cell: CellInfo) => {
+    if (expEnabled && experimentalTab === "respondent") return;
     if (
-      !survey.allowInteraction ||
-      survey.selectionMode !== "paint" ||
+      (!expEnabled && (!survey.allowInteraction || survey.selectionMode !== "paint")) ||
       !activeCategory ||
-      lockedCellKeys.has(key)
+      lockedCellKeys.has(cell.key)
     ) {
       return;
     }
+    if (expEnabled && experimental.prefillMode !== "weighted") {
+      // Experimental setup: toggle in fixedAssignments
+      const current = experimental.fixedAssignments[cell.exportKey];
+      applyAssignment(
+        cell.exportKey,
+        cell.key,
+        current === activeCategory ? null : activeCategory,
+      );
+    } else if (!expEnabled) {
+      setAssignments((prev) => {
+        const current = prev[cell.key];
+        const next = { ...prev };
+        if (current === activeCategory) {
+          delete next[cell.key];
+        } else {
+          next[cell.key] = activeCategory;
+        }
+        return next;
+      });
+    }
+  };
 
-    setAssignments((prev) => {
-      const current = prev[key];
-      const next = { ...prev };
-      if (current === activeCategory) {
-        delete next[key];
-      } else {
-        next[key] = activeCategory;
-      }
-      return next;
-    });
+  const switchToRespondent = () => {
+    if (experimental.prefillMode === "shuffle") {
+      setShuffleSnapshot(computeShuffle(experimental.fixedAssignments, cells));
+    }
+    setResponses({});
+    setExperimentalTab("respondent");
+  };
+
+  const regenerateWeighted = () => {
+    setWeightedPreview(computeWeightedSample(experimental.weightedEntries, cells));
   };
 
   const qualtricsSnippet = useMemo(() => buildQualtricsSnippet(config), [config]);
@@ -151,6 +305,26 @@ export const PreviewPanel: React.FC = () => {
     }
   };
 
+  // Toolbar visibility
+  const showPaintToolbar =
+    !expEnabled
+      ? survey.allowInteraction && categories.length > 0 && survey.selectionMode === "paint"
+      : experimentalTab === "setup" &&
+        experimental.prefillMode !== "weighted" &&
+        categories.length > 0;
+
+  const showDragDropToolbar =
+    !expEnabled &&
+    survey.allowInteraction &&
+    categories.length > 0 &&
+    survey.selectionMode === "dragdrop";
+
+  const showDropdownHint =
+    !expEnabled &&
+    survey.allowInteraction &&
+    categories.length > 0 &&
+    survey.selectionMode === "dropdown";
+
   return (
     <>
       <section
@@ -163,105 +337,160 @@ export const PreviewPanel: React.FC = () => {
             <span>
               {layout.rows} × {layout.cols}
             </span>
-            {survey.allowInteraction && categories.length > 0 && (
+            {!expEnabled && survey.allowInteraction && categories.length > 0 && (
               <span>{getSelectionModeLabel(survey.selectionMode)}</span>
+            )}
+            {expEnabled && (
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+                Experimental
+              </span>
             )}
           </div>
         </header>
 
-        {survey.allowInteraction &&
-          categories.length > 0 &&
-          survey.selectionMode === "paint" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-slate-600">Placing:</span>
-              <div className="flex flex-wrap gap-1">
-                {categories.map((cat) => {
-                  const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setActiveCategory(cat)}
-                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
-                        activeCategory === cat
-                          ? "shadow-sm"
-                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                      }`}
-                      style={
-                        activeCategory === cat
-                          ? {
-                              borderColor: color,
-                              backgroundColor: hexToRgba(color, 0.1),
-                              color: "#0f172a",
-                            }
-                          : {}
-                      }
-                    >
-                      <span
-                        className="h-2 w-2 flex-shrink-0 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
+        {/* Experimental Setup / Respondent tab toggle */}
+        {expEnabled && (
+          <div className="inline-flex self-start items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setExperimentalTab("setup")}
+              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+                experimentalTab === "setup"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:bg-white/60"
+              }`}
+            >
+              Setup
+            </button>
+            <button
+              type="button"
+              onClick={switchToRespondent}
+              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+                experimentalTab === "respondent"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:bg-white/60"
+              }`}
+            >
+              Respondent Preview
+            </button>
+          </div>
+        )}
+
+        {/* Weighted mode: regenerate button in setup tab */}
+        {expEnabled &&
+          experimentalTab === "setup" &&
+          experimental.prefillMode === "weighted" && (
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-slate-500 flex-1">
+                Sample preview — each respondent gets an independent draw.
+              </p>
+              <button
+                type="button"
+                onClick={regenerateWeighted}
+                className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Regenerate
+              </button>
             </div>
           )}
 
-        {survey.allowInteraction &&
-          categories.length > 0 &&
-          survey.selectionMode === "dragdrop" && (
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-slate-600">
-                Drag a label onto a cell:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => {
-                  const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      draggable
-                      onDragStart={() => setDraggedCategory(cat)}
-                      onDragEnd={() => {
-                        setDraggedCategory(null);
-                        setDragOverCell(null);
-                      }}
-                      className="rounded-full border px-3 py-1 text-xs font-medium text-slate-700"
-                      style={{
-                        borderColor: color,
-                        backgroundColor: hexToRgba(color, 0.12),
-                      }}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={() => setDraggedCategory("__CLEAR__")}
-                  onDragEnd={() => {
-                    setDraggedCategory(null);
-                    setDragOverCell(null);
-                  }}
-                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
-                >
-                  Clear cell
-                </button>
-              </div>
+        {/* Paint toolbar */}
+        {showPaintToolbar && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-600">Placing:</span>
+            <div className="flex flex-wrap gap-1">
+              {categories.map((cat) => {
+                const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
+                      activeCategory === cat
+                        ? "shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                    style={
+                      activeCategory === cat
+                        ? {
+                            borderColor: color,
+                            backgroundColor: hexToRgba(color, 0.1),
+                            color: "#0f172a",
+                          }
+                        : {}
+                    }
+                  >
+                    <span
+                      className="h-2 w-2 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    {cat}
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
+        )}
 
-        {survey.allowInteraction &&
-          categories.length > 0 &&
-          survey.selectionMode === "dropdown" && (
-            <p className="text-xs text-slate-500">
-              Each cell gets its own dropdown so respondents have to make a deliberate choice.
-            </p>
-          )}
+        {/* Drag-drop toolbar */}
+        {showDragDropToolbar && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-slate-600">
+              Drag a label onto a cell:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => {
+                const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    draggable
+                    onDragStart={() => setDraggedCategory(cat)}
+                    onDragEnd={() => {
+                      setDraggedCategory(null);
+                      setDragOverCell(null);
+                    }}
+                    className="rounded-full border px-3 py-1 text-xs font-medium text-slate-700"
+                    style={{
+                      borderColor: color,
+                      backgroundColor: hexToRgba(color, 0.12),
+                    }}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                draggable
+                onDragStart={() => setDraggedCategory("__CLEAR__")}
+                onDragEnd={() => {
+                  setDraggedCategory(null);
+                  setDragOverCell(null);
+                }}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+              >
+                Clear cell
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dropdown hint */}
+        {showDropdownHint && (
+          <p className="text-xs text-slate-500">
+            Each cell gets its own dropdown so respondents have to make a deliberate choice.
+          </p>
+        )}
+
+        {/* Experimental respondent hint */}
+        {expEnabled && experimentalTab === "respondent" && responseLabels.length === 0 && (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            No response labels defined — add them in the Survey tab under Experimental Mode.
+          </p>
+        )}
 
         <p className="text-sm text-slate-700">{layout.questionText}</p>
 
@@ -288,19 +517,94 @@ export const PreviewPanel: React.FC = () => {
             }}
           >
             {cells.map((cell) => {
-              const assignedCat = assignments[cell.key];
+              // For experimental mode use exportKey for lookup, else use key
+              const lookupKey = expEnabled ? cell.exportKey : cell.key;
+              const assignedCat = displayAssignments[lookupKey];
               const catMeta = assignedCat ? survey.categoryMeta[assignedCat] : null;
               const catColor = catMeta?.color ?? "#60a5fa";
               const catImage = catMeta?.imageUrl ?? "";
               const isDropTarget =
-                survey.selectionMode === "dragdrop" && dragOverCell === cell.key;
+                !expEnabled &&
+                survey.selectionMode === "dragdrop" &&
+                dragOverCell === cell.key;
 
+              // Experimental respondent view
+              if (expEnabled && experimentalTab === "respondent" && !cell.isCenter) {
+                return (
+                  <div
+                    key={cell.key}
+                    className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border font-medium"
+                    style={
+                      assignedCat
+                        ? {
+                            backgroundColor: hexToRgba(catColor, 0.2),
+                            borderColor: catColor,
+                            color: "#0f172a",
+                          }
+                        : {
+                            backgroundColor: "#ffffff",
+                            borderColor: "#cbd5e1",
+                            color: "#1e293b",
+                          }
+                    }
+                  >
+                    {/* Pre-filled content — top portion */}
+                    <div
+                      className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                      style={
+                        assignedCat
+                          ? { borderBottom: `1px solid ${hexToRgba(catColor, 0.4)}` }
+                          : { borderBottom: "1px solid #e2e8f0" }
+                      }
+                    >
+                      {assignedCat ? (
+                        renderAssignedContent(assignedCat, catImage)
+                      ) : (
+                        <div className="flex flex-1 items-center justify-center text-[9px] text-slate-400">
+                          —
+                        </div>
+                      )}
+                    </div>
+                    {/* Response dropdown — bottom portion */}
+                    {responseLabels.length > 0 && (
+                      <div className="flex-shrink-0 p-0.5">
+                        <select
+                          aria-label={`Response for row ${cell.row} column ${cell.col}`}
+                          value={responses[cell.exportKey] ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setResponses((prev) => {
+                              const next = { ...prev };
+                              if (!val) {
+                                delete next[cell.exportKey];
+                              } else {
+                                next[cell.exportKey] = val;
+                              }
+                              return next;
+                            });
+                          }}
+                          className="w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-[9px] text-slate-900 outline-none focus:border-sky-500"
+                        >
+                          <option value="">— react —</option>
+                          {responseLabels.map((lbl) => (
+                            <option key={lbl} value={lbl}>
+                              {lbl}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Standard cell rendering (also used for experimental setup tab)
               return (
                 <div
                   key={cell.key}
-                  onClick={() => handlePaintCellClick(cell.key)}
+                  onClick={() => handlePaintCellClick(cell)}
                   onDragOver={(e) => {
-                    if (!survey.allowInteraction || survey.selectionMode !== "dragdrop") {
+                    if (expEnabled || !survey.allowInteraction || survey.selectionMode !== "dragdrop") {
                       return;
                     }
                     e.preventDefault();
@@ -316,6 +620,7 @@ export const PreviewPanel: React.FC = () => {
                   }}
                   onDrop={(e) => {
                     if (
+                      expEnabled ||
                       !survey.allowInteraction ||
                       survey.selectionMode !== "dragdrop" ||
                       cell.isCenter
@@ -330,6 +635,7 @@ export const PreviewPanel: React.FC = () => {
                       return;
                     }
                     applyAssignment(
+                      cell.exportKey,
                       cell.key,
                       droppedCategory === "__CLEAR__" ? null : droppedCategory,
                     );
@@ -337,8 +643,10 @@ export const PreviewPanel: React.FC = () => {
                     setDraggedCategory(null);
                   }}
                   className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border font-medium ${
-                    survey.allowInteraction &&
-                    survey.selectionMode === "paint" &&
+                    ((!expEnabled && survey.allowInteraction && survey.selectionMode === "paint") ||
+                      (expEnabled &&
+                        experimentalTab === "setup" &&
+                        experimental.prefillMode !== "weighted")) &&
                     !cell.isCenter
                       ? "cursor-pointer transition-colors"
                       : ""
@@ -371,7 +679,7 @@ export const PreviewPanel: React.FC = () => {
                 >
                   {assignedCat ? (
                     renderAssignedContent(assignedCat, catImage)
-                  ) : survey.allowInteraction &&
+                  ) : !expEnabled && survey.allowInteraction &&
                     survey.selectionMode === "dropdown" &&
                     !cell.isCenter ? (
                     <div className="flex h-full flex-col justify-center gap-1 p-1">
@@ -379,7 +687,7 @@ export const PreviewPanel: React.FC = () => {
                         aria-label={`Choose label for row ${cell.row} column ${cell.col}`}
                         value={assignments[cell.key] ?? ""}
                         onChange={(e) =>
-                          applyAssignment(cell.key, e.target.value || null)
+                          applyAssignment(cell.exportKey, cell.key, e.target.value || null)
                         }
                         className="w-full min-w-0 rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] text-slate-900 outline-none focus:border-sky-500"
                       >
@@ -469,31 +777,71 @@ export const PreviewPanel: React.FC = () => {
               </div>
               <aside className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
                 <h4 className="text-sm font-semibold">Qualtrics setup</h4>
-                <ol className="flex flex-col gap-2">
-                  <li>
-                    In Qualtrics, open <strong>Survey</strong>, then <strong>Survey Flow</strong>.
-                  </li>
-                  <li>
-                    Add an <strong>Embedded Data</strong> element before this question.
-                  </li>
-                  <li>
-                    Create a field named{" "}
-                    <code className="rounded bg-amber-100 px-1 font-mono font-bold">
-                      GridAssignments
-                    </code>{" "}
-                    and leave it blank.
-                  </li>
-                  <li>
-                    Go back to the question, open <strong>JavaScript</strong> under question behavior, and paste the code.
-                  </li>
-                  <li>
-                    Export results from <strong>Data &amp; Analysis</strong>. Responses are saved as JSON like{" "}
-                    <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>.
-                  </li>
-                </ol>
+                {expEnabled ? (
+                  <ol className="flex flex-col gap-2">
+                    <li>
+                      In Qualtrics, open <strong>Survey</strong>, then{" "}
+                      <strong>Survey Flow</strong>.
+                    </li>
+                    <li>
+                      Add an <strong>Embedded Data</strong> element before this question.
+                    </li>
+                    <li>
+                      Create two fields:{" "}
+                      <code className="rounded bg-amber-100 px-1 font-mono font-bold">
+                        GridPrefills
+                      </code>{" "}
+                      (what was shown) and{" "}
+                      <code className="rounded bg-amber-100 px-1 font-mono font-bold">
+                        GridResponses
+                      </code>{" "}
+                      (what the respondent selected). Leave both blank.
+                    </li>
+                    <li>
+                      Go back to the question, open <strong>JavaScript</strong> under
+                      question behavior, and paste the code.
+                    </li>
+                    <li>
+                      Export results from <strong>Data &amp; Analysis</strong>.
+                      Pre-fills are saved as{" "}
+                      <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>{" "}
+                      and responses as{" "}
+                      <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Good"}`}</code>.
+                    </li>
+                  </ol>
+                ) : (
+                  <ol className="flex flex-col gap-2">
+                    <li>
+                      In Qualtrics, open <strong>Survey</strong>, then{" "}
+                      <strong>Survey Flow</strong>.
+                    </li>
+                    <li>
+                      Add an <strong>Embedded Data</strong> element before this question.
+                    </li>
+                    <li>
+                      Create a field named{" "}
+                      <code className="rounded bg-amber-100 px-1 font-mono font-bold">
+                        GridAssignments
+                      </code>{" "}
+                      and leave it blank.
+                    </li>
+                    <li>
+                      Go back to the question, open <strong>JavaScript</strong> under
+                      question behavior, and paste the code.
+                    </li>
+                    <li>
+                      Export results from <strong>Data &amp; Analysis</strong>. Responses
+                      are saved as JSON like{" "}
+                      <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>.
+                    </li>
+                  </ol>
+                )}
                 <p>
-                  If you have multiple grid questions, rename the embedded field to something unique like{" "}
-                  <code className="rounded bg-amber-100 px-1 font-mono">GridAssignments_Q2</code>
+                  If you have multiple grid questions, rename the embedded field(s) to
+                  something unique like{" "}
+                  <code className="rounded bg-amber-100 px-1 font-mono">
+                    {expEnabled ? "GridPrefills_Q2" : "GridAssignments_Q2"}
+                  </code>
                   .
                 </p>
               </aside>
