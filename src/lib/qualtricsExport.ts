@@ -28,7 +28,12 @@ export function buildQualtricsSnippet(
   options: QualtricsExportOptions = {},
 ): string {
   const embeddedDataField = options.embeddedDataField ?? "GridAssignments";
-  const exportConfig = { layout: config.layout, tuning: config.tuning, survey: config.survey };
+  const exportConfig = {
+    layout: config.layout,
+    tuning: config.tuning,
+    survey: config.survey,
+    experimental: config.experimental ?? null,
+  };
   const cfgJson = JSON.stringify(exportConfig, null, 2);
 
   return `Qualtrics.SurveyEngine.addOnload(function()
@@ -54,6 +59,22 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	var activeCategory = null;
 	var draggedCategory = null;
 
+	// Experimental mode
+	var expCfg = cfg.experimental || {};
+	var isExperimental = !!(expCfg && expCfg.enabled);
+	var prefillMode = expCfg.prefillMode || "fixed";
+	var fixedAssignments = expCfg.fixedAssignments || {};
+	var weightedEntries = expCfg.weightedEntries || [];
+	var responseLabels = [];
+	if (expCfg.responseLabelsCsv) {
+		responseLabels = expCfg.responseLabelsCsv
+			.split(",")
+			.map(function (l) { return l.trim(); })
+			.filter(function (l) { return l.length > 0; });
+	}
+	var prefills = {};
+	var experimentalResponses = {};
+
 	if (surveyCfg.categoriesCsv) {
 		categories = surveyCfg.categoriesCsv
 			.split(",")
@@ -77,8 +98,188 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		return surveyCfg.categoryMeta[catName] || {};
 	}
 
-	function persistAssignments() {
-		Qualtrics.SurveyEngine.setEmbeddedData(${JSON.stringify(embeddedDataField)}, JSON.stringify(assignments));
+	function persistAll() {
+		if (isExperimental) {
+			Qualtrics.SurveyEngine.setEmbeddedData("GridPrefills", JSON.stringify(prefills));
+			Qualtrics.SurveyEngine.setEmbeddedData("GridResponses", JSON.stringify(experimentalResponses));
+		} else {
+			Qualtrics.SurveyEngine.setEmbeddedData(${JSON.stringify(embeddedDataField)}, JSON.stringify(assignments));
+		}
+	}
+
+	function computePrefills(totalCells, centerRow, centerCol) {
+		if (!isExperimental) return;
+		if (prefillMode === "fixed") {
+			Object.keys(fixedAssignments).forEach(function (k) {
+				prefills[k] = fixedAssignments[k];
+			});
+		} else if (prefillMode === "shuffle") {
+			var keys = Object.keys(fixedAssignments);
+			var values = keys.map(function (k) { return fixedAssignments[k]; });
+			for (var si = values.length - 1; si > 0; si--) {
+				var sj = Math.floor(Math.random() * (si + 1));
+				var tmp = values[si]; values[si] = values[sj]; values[sj] = tmp;
+			}
+			keys.forEach(function (k, idx) { prefills[k] = values[idx]; });
+		} else if (prefillMode === "weighted") {
+			var totalWeight = 0;
+			weightedEntries.forEach(function (e) { totalWeight += e.weight; });
+			if (totalWeight === 0) return;
+			var cdf = [];
+			var cum = 0;
+			weightedEntries.forEach(function (e) {
+				cum += e.weight / totalWeight;
+				cdf.push({ category: e.category, cumulative: cum });
+			});
+			for (var ri = 1; ri <= cfg.layout.rows; ri++) {
+				for (var ci = 1; ci <= cfg.layout.cols; ci++) {
+					var isCenter = cfg.layout.includeCenterCell && ri === centerRow && ci === centerCol;
+					if (isCenter) continue;
+					var k = "r" + ri + "-c" + ci;
+					var rand = Math.random();
+					for (var ei = 0; ei < cdf.length; ei++) {
+						if (rand <= cdf[ei].cumulative) {
+							prefills[k] = cdf[ei].category;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function renderExperimentalCell(cellRef, key, isCenterCell) {
+		cellRef.innerHTML = "";
+		cellRef.style.display = "flex";
+		cellRef.style.flexDirection = "column";
+		cellRef.style.overflow = "hidden";
+
+		if (isCenterCell) {
+			resetCellBaseStyles(cellRef, true);
+			var centerLabel = document.createElement("div");
+			centerLabel.textContent = cfg.layout.centerCellLabel || "Your House";
+			centerLabel.style.fontSize = "10px";
+			centerLabel.style.fontWeight = "500";
+			centerLabel.style.textAlign = "center";
+			centerLabel.style.lineHeight = "1.2";
+			centerLabel.style.padding = "4px";
+			cellRef.appendChild(centerLabel);
+			return;
+		}
+
+		var catName = prefills[key];
+		var meta = catName ? getCategoryMeta(catName) : {};
+		var catColor = meta.color || null;
+		var catImage = meta.imageUrl || "";
+
+		// Top portion: pre-filled content
+		var topDiv = document.createElement("div");
+		topDiv.style.flex = "1";
+		topDiv.style.minHeight = "0";
+		topDiv.style.display = "flex";
+		topDiv.style.flexDirection = "column";
+		topDiv.style.overflow = "hidden";
+		topDiv.style.backgroundColor = catColor ? hexToRgba(catColor, 0.2) : "#ffffff";
+		topDiv.style.borderBottom = catColor ? ("1px solid " + hexToRgba(catColor, 0.4)) : "1px solid #e2e8f0";
+
+		if (catName) {
+			if (catImage) {
+				var imgWrap = document.createElement("div");
+				imgWrap.style.flex = "1";
+				imgWrap.style.minHeight = "0";
+				imgWrap.style.display = "flex";
+				imgWrap.style.alignItems = "center";
+				imgWrap.style.justifyContent = "center";
+				imgWrap.style.overflow = "hidden";
+				imgWrap.style.padding = "2px";
+				var img = document.createElement("img");
+				img.src = catImage;
+				img.alt = catName;
+				img.style.maxWidth = "100%";
+				img.style.maxHeight = "100%";
+				img.style.objectFit = "contain";
+				imgWrap.appendChild(img);
+				topDiv.appendChild(imgWrap);
+			}
+			var textWrap = document.createElement("div");
+			textWrap.style.textAlign = "center";
+			textWrap.style.fontWeight = "500";
+			textWrap.style.lineHeight = "1.2";
+			textWrap.style.flexShrink = catImage ? "0" : "0";
+			if (catImage) {
+				textWrap.style.padding = "0 2px 2px";
+				textWrap.style.fontSize = "9px";
+				textWrap.style.whiteSpace = "nowrap";
+				textWrap.style.overflow = "hidden";
+				textWrap.style.textOverflow = "ellipsis";
+			} else {
+				textWrap.style.flex = "1";
+				textWrap.style.display = "flex";
+				textWrap.style.alignItems = "center";
+				textWrap.style.justifyContent = "center";
+				textWrap.style.padding = "4px";
+				textWrap.style.fontSize = "10px";
+			}
+			textWrap.textContent = catName;
+			topDiv.appendChild(textWrap);
+		} else {
+			var emptyDiv = document.createElement("div");
+			emptyDiv.style.flex = "1";
+			emptyDiv.style.display = "flex";
+			emptyDiv.style.alignItems = "center";
+			emptyDiv.style.justifyContent = "center";
+			emptyDiv.style.fontSize = "9px";
+			emptyDiv.style.color = "#94a3b8";
+			emptyDiv.textContent = "\u2014";
+			topDiv.appendChild(emptyDiv);
+		}
+
+		cellRef.style.backgroundColor = catColor ? hexToRgba(catColor, 0.2) : "#ffffff";
+		cellRef.style.borderColor = catColor || "#cbd5e1";
+		cellRef.appendChild(topDiv);
+
+		// Bottom portion: response dropdown
+		if (responseLabels.length > 0) {
+			var bottomDiv = document.createElement("div");
+			bottomDiv.style.flexShrink = "0";
+			bottomDiv.style.padding = "2px";
+			var select = document.createElement("select");
+			select.style.width = "100%";
+			select.style.border = "1px solid #cbd5e1";
+			select.style.borderRadius = "4px";
+			select.style.backgroundColor = "#ffffff";
+			select.style.padding = "2px 4px";
+			select.style.fontSize = "9px";
+			select.style.color = "#0f172a";
+			select.style.outline = "none";
+
+			var emptyOpt = document.createElement("option");
+			emptyOpt.value = "";
+			emptyOpt.textContent = "\u2014 react \u2014";
+			select.appendChild(emptyOpt);
+
+			responseLabels.forEach(function (lbl) {
+				var opt = document.createElement("option");
+				opt.value = lbl;
+				opt.textContent = lbl;
+				select.appendChild(opt);
+			});
+
+			select.value = experimentalResponses[key] || "";
+			(function (k, sel) {
+				sel.onchange = function () {
+					if (!sel.value) {
+						delete experimentalResponses[k];
+					} else {
+						experimentalResponses[k] = sel.value;
+					}
+					persistAll();
+				};
+			})(key, select);
+
+			bottomDiv.appendChild(select);
+			cellRef.appendChild(bottomDiv);
+		}
 	}
 
 	function resetCellBaseStyles(cellRef, isCenterCell) {
@@ -188,7 +389,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			} else {
 				assignments[key] = select.value;
 			}
-			persistAssignments();
+			persistAll();
 			renderCell(cellRef, key, isCenterCell);
 		};
 
@@ -196,6 +397,11 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	}
 
 	function renderCell(cellRef, key, isCenterCell) {
+		if (isExperimental) {
+			renderExperimentalCell(cellRef, key, isCenterCell);
+			return;
+		}
+
 		var assigned = assignments[key];
 		if (assigned) {
 			var meta = getCategoryMeta(assigned);
@@ -263,7 +469,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	questionText.style.marginBottom = "8px";
 	container.appendChild(questionText);
 
-	if (allowInteraction && categories.length > 0 && selectionMode === "paint") {
+	if (!isExperimental && allowInteraction && categories.length > 0 && selectionMode === "paint") {
 		var toolbar = document.createElement("div");
 		toolbar.style.display = "flex";
 		toolbar.style.flexWrap = "wrap";
@@ -322,7 +528,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		container.appendChild(toolbar);
 	}
 
-	if (allowInteraction && categories.length > 0 && selectionMode === "dragdrop") {
+	if (!isExperimental && allowInteraction && categories.length > 0 && selectionMode === "dragdrop") {
 		var dragHelp = document.createElement("div");
 		dragHelp.style.display = "flex";
 		dragHelp.style.flexDirection = "column";
@@ -350,6 +556,11 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		container.appendChild(dragHelp);
 	}
 
+	var totalCellsCount = cfg.layout.rows * cfg.layout.cols;
+	var centerRowVal = cfg.layout.centerRow || Math.ceil(cfg.layout.rows / 2);
+	var centerColVal = cfg.layout.centerCol || Math.ceil(cfg.layout.cols / 2);
+	computePrefills(totalCellsCount, centerRowVal, centerColVal);
+
 	var wrapper = document.createElement("div");
 	wrapper.style.width = cfg.tuning.previewWidth + "px";
 	wrapper.style.height = cfg.tuning.previewHeight + "px";
@@ -376,14 +587,10 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	grid.style.gap = cfg.tuning.gridGap + "px";
 	grid.style.padding = cfg.tuning.gridPadding + "px";
 
-	var totalCells = cfg.layout.rows * cfg.layout.cols;
-	var centerRow = cfg.layout.centerRow || Math.ceil(cfg.layout.rows / 2);
-	var centerCol = cfg.layout.centerCol || Math.ceil(cfg.layout.cols / 2);
-
-	for (var i = 0; i < totalCells; i++) {
+	for (var i = 0; i < totalCellsCount; i++) {
 		var row = Math.floor(i / cfg.layout.cols) + 1;
 		var col = (i % cfg.layout.cols) + 1;
-		var isCenter = cfg.layout.includeCenterCell && row === centerRow && col === centerCol;
+		var isCenter = cfg.layout.includeCenterCell && row === centerRowVal && col === centerColVal;
 		var key = "r" + row + "-c" + col;
 		var cell = document.createElement("div");
 		cell.style.borderRadius = "0.375rem";
@@ -396,7 +603,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 
 		renderCell(cell, key, isCenter);
 
-		if (allowInteraction && selectionMode === "paint") {
+		if (!isExperimental && allowInteraction && selectionMode === "paint") {
 			cell.style.cursor = isCenter ? "default" : "pointer";
 			(function (cellRef, cellKey, isCenterCell) {
 				cellRef.onclick = function () {
@@ -407,13 +614,13 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					} else {
 						assignments[cellKey] = activeCategory;
 					}
-					persistAssignments();
+					persistAll();
 					renderCell(cellRef, cellKey, isCenterCell);
 				};
 			})(cell, key, isCenter);
 		}
 
-		if (allowInteraction && selectionMode === "dragdrop") {
+		if (!isExperimental && allowInteraction && selectionMode === "dragdrop") {
 			(function (cellRef, cellKey, isCenterCell) {
 				cellRef.style.cursor = isCenterCell ? "default" : "copy";
 				cellRef.ondragover = function (event) {
@@ -444,7 +651,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					} else {
 						assignments[cellKey] = dropped;
 					}
-					persistAssignments();
+					persistAll();
 					renderCell(cellRef, cellKey, isCenterCell);
 				};
 			})(cell, key, isCenter);

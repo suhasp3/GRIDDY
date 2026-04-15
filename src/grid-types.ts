@@ -41,10 +41,27 @@ export interface SurveyConfig {
   categoryMeta: Record<string, CategoryMeta>;
 }
 
+export type ExperimentalPrefillMode = "fixed" | "shuffle" | "weighted";
+
+export interface WeightEntry {
+  category: string;
+  weight: number; // raw number, not required to sum to 100
+}
+
+export interface ExperimentalConfig {
+  enabled: boolean;
+  prefillMode: ExperimentalPrefillMode;
+  /** cellKey format "r{row}-c{col}" -> category name */
+  fixedAssignments: Record<string, string>;
+  weightedEntries: WeightEntry[];
+  responseLabelsCsv: string;
+}
+
 export interface GridConfig {
   id: string;
   name: string;
   layout: LayoutConfig;
   tuning: TuningConfig;
   survey: SurveyConfig;
+  experimental?: ExperimentalConfig;
 }

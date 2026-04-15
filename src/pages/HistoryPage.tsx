@@ -13,7 +13,6 @@ import {
 import { useEditor } from "../EditorContext";
 import {
   buildQualtricsMultiQuestionSnippet,
-  buildQualtricsSnippet,
   sanitizeEmbeddedDataField,
 } from "../lib/qualtricsExport";
 

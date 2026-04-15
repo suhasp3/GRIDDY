@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo, useReducer } from "react";
 import {
   CategoryMeta,
+  ExperimentalConfig,
   GridConfig,
   LayoutConfig,
   SurveyConfig,
@@ -19,6 +20,16 @@ const CATEGORY_PALETTE = [
   "#a3e635", // lime
   "#fb7185", // rose
 ];
+
+function defaultExperimental(): ExperimentalConfig {
+  return {
+    enabled: false,
+    prefillMode: "fixed",
+    fixedAssignments: {},
+    weightedEntries: [],
+    responseLabelsCsv: "",
+  };
+}
 
 /** Sync categoryMeta when the CSV changes: keep existing entries, add new ones with palette colors. */
 function syncCategoryMeta(
@@ -55,6 +66,7 @@ function syncCategoryMeta(
 
 function normalizeConfig(config: GridConfig): GridConfig {
   const categoriesCsv = config.survey.categoriesCsv ?? "";
+  const existingExp: Partial<ExperimentalConfig> = config.experimental ?? {};
   return {
     ...config,
     survey: {
@@ -64,6 +76,12 @@ function normalizeConfig(config: GridConfig): GridConfig {
         categoriesCsv,
         config.survey.categoryMeta ?? {},
       ),
+    },
+    experimental: {
+      ...defaultExperimental(),
+      ...existingExp,
+      fixedAssignments: existingExp.fixedAssignments ?? {},
+      weightedEntries: existingExp.weightedEntries ?? [],
     },
   };
 }
@@ -78,6 +96,7 @@ type EditorAction =
   | { type: "updateLayout"; patch: Partial<LayoutConfig> }
   | { type: "updateTuning"; patch: Partial<TuningConfig> }
   | { type: "updateSurvey"; patch: Partial<SurveyConfig> }
+  | { type: "updateExperimental"; patch: Partial<ExperimentalConfig> }
   | { type: "markSaved" }
   | { type: "newSurvey" };
 
@@ -122,6 +141,7 @@ function createDefaultConfig(): GridConfig {
     layout,
     tuning,
     survey,
+    experimental: defaultExperimental(),
   };
 }
 
@@ -156,8 +176,41 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           action.patch.categoriesCsv,
           merged.categoryMeta,
         );
+        // Prune fixedAssignments referencing categories that no longer exist
+        const validCats = new Set(
+          action.patch.categoriesCsv
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean),
+        );
+        const exp = state.config.experimental!;
+        const prunedAssignments = Object.fromEntries(
+          Object.entries(exp.fixedAssignments).filter(([, v]) => validCats.has(v)),
+        );
+        const prunedWeights = exp.weightedEntries.filter((e) =>
+          validCats.has(e.category),
+        );
+        return {
+          ...state,
+          config: {
+            ...state.config,
+            survey: merged,
+            experimental: {
+              ...exp,
+              fixedAssignments: prunedAssignments,
+              weightedEntries: prunedWeights,
+            },
+          },
+        };
       }
       return { ...state, config: { ...state.config, survey: merged } };
+    }
+    case "updateExperimental": {
+      const merged: ExperimentalConfig = {
+        ...state.config.experimental!,
+        ...action.patch,
+      };
+      return { ...state, config: { ...state.config, experimental: merged } };
     }
     default:
       return state;
