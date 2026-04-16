@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useEditor } from "../EditorContext";
 import { useAuth } from "../lib/authContext";
 import { saveSurvey } from "../lib/surveysApi";
@@ -7,17 +6,11 @@ import { saveSurvey } from "../lib/surveysApi";
 export default function SaveButton() {
   const { user } = useAuth();
   const { state, dispatch } = useEditor();
-  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<"saved" | "error" | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleClick = async () => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
     const title = state.config.name.trim();
     if (!title) {
       setErrorMsg("Please enter a survey title before saving.");
@@ -29,7 +22,7 @@ export default function SaveButton() {
     setSaving(true);
     setFlash(null);
     try {
-      await saveSurvey(state.config, user.id);
+      await saveSurvey(state.config, user?.id);
       dispatch({ type: "markSaved" });
       setFlash("saved");
       setTimeout(() => setFlash(null), 2000);

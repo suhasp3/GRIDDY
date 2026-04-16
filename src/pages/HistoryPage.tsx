@@ -76,20 +76,19 @@ export default function HistoryPage() {
   };
 
   useEffect(() => {
-    if (!user) return;
     setFetching(true);
-    listSurveys(user.id)
+    setError(null);
+    listSurveys(user?.id)
       .then(setSurveys)
       .catch((e) => setError((e as Error).message))
       .finally(() => setFetching(false));
-  }, [user]);
+  }, [user?.id]);
 
   const refreshSurveys = async () => {
-    if (!user) return;
     setFetching(true);
     setError(null);
     try {
-      const data = await listSurveys(user.id);
+      const data = await listSurveys(user?.id);
       setSurveys(data);
     } catch (e) {
       setError((e as Error).message);
@@ -100,7 +99,7 @@ export default function HistoryPage() {
 
   const handleOpen = async (id: string) => {
     try {
-      const config = await loadSurvey(id);
+      const config = await loadSurvey(id, user?.id);
       dispatch({ type: "setConfig", config });
       dispatch({ type: "markSaved" });
       navigate("/");
@@ -110,13 +109,11 @@ export default function HistoryPage() {
   };
 
   const handleExport = async () => {
-    if (!user) return;
-
     setTransferring(true);
     setError(null);
     setNotice(null);
     try {
-      const payload = await exportSurveys(user.id);
+      const payload = await exportSurveys(user?.id);
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
       });
@@ -144,7 +141,7 @@ export default function HistoryPage() {
   };
 
   const handleExportQualtrics = async () => {
-    if (!user || selectedSurveyIds.length === 0) return;
+    if (selectedSurveyIds.length === 0) return;
 
     setTransferring(true);
     setError(null);
@@ -152,7 +149,7 @@ export default function HistoryPage() {
     setBundleCopied(false);
 
     try {
-      const payload = await exportSurveys(user.id);
+      const payload = await exportSurveys(user?.id);
       const selected = payload.surveys.filter((survey) =>
         selectedSurveyIds.includes(survey.id),
       );
@@ -257,7 +254,7 @@ export default function HistoryPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
 
-    if (!file || !user) return;
+    if (!file) return;
 
     setTransferring(true);
     setError(null);
@@ -272,7 +269,7 @@ export default function HistoryPage() {
       }
 
       const { importedCount, skippedDuplicateCount } = await importSurveys(
-        user.id,
+        user?.id,
         parsed.surveys,
       );
       await refreshSurveys();
@@ -299,7 +296,7 @@ export default function HistoryPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteSurvey(id);
+      await deleteSurvey(id, user?.id);
       setSurveys((prev) => prev.filter((s) => s.id !== id));
     } catch (e) {
       setError((e as Error).message);
@@ -307,14 +304,6 @@ export default function HistoryPage() {
   };
 
   if (authLoading) return null;
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-slate-600">Sign in to view your saved surveys.</p>
-      </div>
-    );
-  }
 
   const currentBlock = qualtricsBlocks[currentBundleIndex] ?? null;
   const currentBlockLabel = currentBlock
@@ -375,6 +364,12 @@ export default function HistoryPage() {
         {notice && (
           <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>
         )}
+
+        <p className="mb-4 text-sm text-slate-500">
+          {user
+            ? "Signed in: showing surveys from your account."
+            : "Not signed in: showing surveys saved in this browser only."}
+        </p>
 
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
           <button

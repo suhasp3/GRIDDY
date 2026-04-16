@@ -19,15 +19,14 @@ export default function ProfilePage() {
   }, [firstName, lastName]);
 
   useEffect(() => {
-    if (!user) return;
     setFetchingCount(true);
     setError(null);
 
-    getActiveSurveyQuestionCount(user.id)
+    getActiveSurveyQuestionCount(user?.id)
       .then(setQuestionCount)
       .catch((e) => setError((e as Error).message))
       .finally(() => setFetchingCount(false));
-  }, [user]);
+  }, [user?.id]);
 
   if (authLoading) return null;
 
@@ -35,7 +34,17 @@ export default function ProfilePage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
-          <p className="text-center text-slate-600">Sign in to view your profile.</p>
+          <p className="text-center text-slate-600">
+            You are not signed in. Local survey saving is still available in this browser.
+          </p>
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Local Surveys
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">
+              {fetchingCount ? "..." : questionCount}
+            </p>
+          </div>
           <div className="mt-4 text-center">
             <button
               type="button"
