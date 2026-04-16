@@ -52,6 +52,20 @@ export const SurveyTab: React.FC = () => {
     });
   };
 
+  const handleWeightChange = (cat: string, value: string) => {
+    if (value === "") {
+      setWeight(cat, 0);
+      return;
+    }
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+
+    setWeight(cat, Math.max(0, parsed));
+  };
+
   return (
     <form
       className="flex flex-col gap-4"
@@ -204,10 +218,10 @@ export const SurveyTab: React.FC = () => {
                       type="number"
                       min="0"
                       step="1"
-                      value={getWeight(cat)}
-                      onChange={(e) =>
-                        setWeight(cat, Math.max(0, Number(e.target.value)))
-                      }
+                      placeholder="0"
+                      value={getWeight(cat) === 0 ? "" : getWeight(cat)}
+                      onChange={(e) => handleWeightChange(cat, e.target.value)}
+                      onFocus={(e) => e.currentTarget.select()}
                       className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm text-right shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                     />
                   </div>

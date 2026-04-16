@@ -387,8 +387,28 @@ export const PreviewPanel: React.FC = () => {
               <button
                 type="button"
                 onClick={regenerateWeighted}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
               >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className="h-3.5 w-3.5"
+                >
+                  <path
+                    d="M16.25 10a6.25 6.25 0 1 1-1.83-4.42"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M16.25 4.58v3.34h-3.33"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
                 Regenerate
               </button>
             </div>
