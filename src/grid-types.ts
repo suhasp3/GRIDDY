@@ -55,6 +55,8 @@ export interface ExperimentalConfig {
   fixedAssignments: Record<string, string>;
   weightedEntries: WeightEntry[];
   responseLabelsCsv: string;
+  /** Per-response-label color and image metadata, keyed by label name. */
+  responseLabelMeta: Record<string, CategoryMeta>;
 }
 
 export interface GridConfig {

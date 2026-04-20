@@ -71,7 +71,7 @@ function listLocalSurveyMeta(): SurveyMeta[] {
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 }
 
-function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((item) => stableStringify(item)).join(",")}]`;
   }
@@ -87,7 +87,7 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function surveyFingerprint(name: string, config: GridConfig): string {
+export function surveyFingerprint(name: string, config: GridConfig): string {
   const normalizedName = name.trim().toLowerCase();
   const { id: _ignoredId, ...configWithoutId } = config;
 
