@@ -136,8 +136,10 @@ export const PreviewPanel: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeResponseLabel, setActiveResponseLabel] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const [draggedResponseLabel, setDraggedResponseLabel] = useState<string | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
 
   // Experimental mode state
@@ -155,6 +157,16 @@ export const PreviewPanel: React.FC = () => {
       setActiveCategory(categories[0] ?? null);
     }
   }, [categories, activeCategory]);
+
+  useEffect(() => {
+    if (!responseLabels.length) {
+      setActiveResponseLabel(null);
+      return;
+    }
+    if (!activeResponseLabel || !responseLabels.includes(activeResponseLabel)) {
+      setActiveResponseLabel(responseLabels[0] ?? null);
+    }
+  }, [responseLabels, activeResponseLabel]);
 
   useEffect(() => {
     setAssignments({});
@@ -250,6 +262,18 @@ export const PreviewPanel: React.FC = () => {
     [expEnabled, experimentalTab, experimental.prefillMode, experimental.fixedAssignments, dispatch],
   );
 
+  const applyResponse = useCallback((exportKey: string, label: string | null) => {
+    setResponses((prev) => {
+      const next = { ...prev };
+      if (!label) {
+        delete next[exportKey];
+      } else {
+        next[exportKey] = label;
+      }
+      return next;
+    });
+  }, []);
+
   const handlePaintCellClick = (cell: CellInfo) => {
     if (expEnabled && experimentalTab === "respondent") return;
     if (
@@ -307,23 +331,17 @@ export const PreviewPanel: React.FC = () => {
 
   // Toolbar visibility
   const showPaintToolbar =
-    !expEnabled
-      ? survey.allowInteraction && categories.length > 0 && survey.selectionMode === "paint"
-      : experimentalTab === "setup" &&
-        experimental.prefillMode !== "weighted" &&
-        categories.length > 0;
+    (!expEnabled && survey.allowInteraction && categories.length > 0 && survey.selectionMode === "paint") ||
+    (expEnabled && experimentalTab === "setup" && experimental.prefillMode !== "weighted" && categories.length > 0) ||
+    (expEnabled && experimentalTab === "respondent" && responseLabels.length > 0 && survey.selectionMode === "paint");
 
   const showDragDropToolbar =
-    !expEnabled &&
-    survey.allowInteraction &&
-    categories.length > 0 &&
-    survey.selectionMode === "dragdrop";
+    (!expEnabled && survey.allowInteraction && categories.length > 0 && survey.selectionMode === "dragdrop") ||
+    (expEnabled && experimentalTab === "respondent" && responseLabels.length > 0 && survey.selectionMode === "dragdrop");
 
   const showDropdownHint =
-    !expEnabled &&
-    survey.allowInteraction &&
-    categories.length > 0 &&
-    survey.selectionMode === "dropdown";
+    (!expEnabled && survey.allowInteraction && categories.length > 0 && survey.selectionMode === "dropdown") ||
+    (expEnabled && experimentalTab === "respondent" && responseLabels.length > 0 && survey.selectionMode === "dropdown");
 
   return (
     <>
@@ -417,22 +435,28 @@ export const PreviewPanel: React.FC = () => {
         {/* Paint toolbar */}
         {showPaintToolbar && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-600">Placing:</span>
+            <span className="text-xs font-medium text-slate-600">
+              {expEnabled && experimentalTab === "respondent" ? "Reacting:" : "Placing:"}
+            </span>
             <div className="flex flex-wrap gap-1">
-              {categories.map((cat) => {
-                const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
+              {(expEnabled && experimentalTab === "respondent" ? responseLabels : categories).map((item) => {
+                const isRespTab = expEnabled && experimentalTab === "respondent";
+                const color = isRespTab
+                  ? (experimental.responseLabelMeta?.[item]?.color ?? "#8b5cf6")
+                  : (survey.categoryMeta[item]?.color ?? "#60a5fa");
+                const isActive = isRespTab ? activeResponseLabel === item : activeCategory === item;
                 return (
                   <button
-                    key={cat}
+                    key={item}
                     type="button"
-                    onClick={() => setActiveCategory(cat)}
+                    onClick={() => isRespTab ? setActiveResponseLabel(item) : setActiveCategory(item)}
                     className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
-                      activeCategory === cat
+                      isActive
                         ? "shadow-sm"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                     style={
-                      activeCategory === cat
+                      isActive
                         ? {
                             borderColor: color,
                             backgroundColor: hexToRgba(color, 0.1),
@@ -445,7 +469,7 @@ export const PreviewPanel: React.FC = () => {
                       className="h-2 w-2 flex-shrink-0 rounded-full"
                       style={{ backgroundColor: color }}
                     />
-                    {cat}
+                    {item}
                   </button>
                 );
               })}
@@ -457,19 +481,27 @@ export const PreviewPanel: React.FC = () => {
         {showDragDropToolbar && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-600">
-              Drag a label onto a cell:
+              {expEnabled && experimentalTab === "respondent"
+                ? "Drag a reaction onto a cell:"
+                : "Drag a label onto a cell:"}
             </span>
             <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => {
-                const color = survey.categoryMeta[cat]?.color ?? "#60a5fa";
+              {(expEnabled && experimentalTab === "respondent" ? responseLabels : categories).map((item) => {
+                const isRespTab = expEnabled && experimentalTab === "respondent";
+                const color = isRespTab
+                  ? (experimental.responseLabelMeta?.[item]?.color ?? "#8b5cf6")
+                  : (survey.categoryMeta[item]?.color ?? "#60a5fa");
                 return (
                   <button
-                    key={cat}
+                    key={item}
                     type="button"
                     draggable
-                    onDragStart={() => setDraggedCategory(cat)}
+                    onDragStart={() =>
+                      isRespTab ? setDraggedResponseLabel(item) : setDraggedCategory(item)
+                    }
                     onDragEnd={() => {
-                      setDraggedCategory(null);
+                      if (isRespTab) setDraggedResponseLabel(null);
+                      else setDraggedCategory(null);
                       setDragOverCell(null);
                     }}
                     className="rounded-full border px-3 py-1 text-xs font-medium text-slate-700"
@@ -478,22 +510,37 @@ export const PreviewPanel: React.FC = () => {
                       backgroundColor: hexToRgba(color, 0.12),
                     }}
                   >
-                    {cat}
+                    {item}
                   </button>
                 );
               })}
-              <button
-                type="button"
-                draggable
-                onDragStart={() => setDraggedCategory("__CLEAR__")}
-                onDragEnd={() => {
-                  setDraggedCategory(null);
-                  setDragOverCell(null);
-                }}
-                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
-              >
-                Clear cell
-              </button>
+              {expEnabled && experimentalTab === "respondent" ? (
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={() => setDraggedResponseLabel("__CLEAR_RESP__")}
+                  onDragEnd={() => {
+                    setDraggedResponseLabel(null);
+                    setDragOverCell(null);
+                  }}
+                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+                >
+                  Clear response
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={() => setDraggedCategory("__CLEAR__")}
+                  onDragEnd={() => {
+                    setDraggedCategory(null);
+                    setDragOverCell(null);
+                  }}
+                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+                >
+                  Clear cell
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -550,12 +597,81 @@ export const PreviewPanel: React.FC = () => {
 
               // Experimental respondent view
               if (expEnabled && experimentalTab === "respondent" && !cell.isCenter) {
+                const selectedResponse = responses[cell.exportKey] ?? "";
+                const respMeta = selectedResponse
+                  ? (experimental.responseLabelMeta?.[selectedResponse] ?? null)
+                  : null;
+                const respColor = respMeta?.color ?? "#8b5cf6";
+                const respImage = respMeta?.imageUrl ?? "";
+                const hasResponse = Boolean(selectedResponse);
+                const isRespDropTarget =
+                  survey.selectionMode === "dragdrop" && dragOverCell === cell.key;
+                const isInteractive = survey.selectionMode !== "dropdown";
+
                 return (
                   <div
                     key={cell.key}
-                    className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border font-medium"
+                    className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md font-medium transition-colors${
+                      hasResponse ? " border-2" : " border"
+                    }${isInteractive ? " cursor-pointer" : ""}`}
+                    onClick={() => {
+                      if (survey.selectionMode === "paint" && activeResponseLabel) {
+                        const current = responses[cell.exportKey];
+                        applyResponse(
+                          cell.exportKey,
+                          current === activeResponseLabel ? null : activeResponseLabel,
+                        );
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      if (survey.selectionMode !== "dragdrop") return;
+                      e.preventDefault();
+                      setDragOverCell(cell.key);
+                    }}
+                    onDragLeave={() => {
+                      if (
+                        survey.selectionMode === "dragdrop" &&
+                        dragOverCell === cell.key
+                      ) {
+                        setDragOverCell(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      if (survey.selectionMode !== "dragdrop") return;
+                      e.preventDefault();
+                      const dropped =
+                        draggedResponseLabel ?? e.dataTransfer.getData("text/plain");
+                      if (!dropped) {
+                        setDragOverCell(null);
+                        return;
+                      }
+                      applyResponse(
+                        cell.exportKey,
+                        dropped === "__CLEAR_RESP__" ? null : dropped,
+                      );
+                      setDragOverCell(null);
+                      setDraggedResponseLabel(null);
+                    }}
                     style={
-                      assignedCat
+                      isRespDropTarget
+                        ? {
+                            backgroundColor: "#e2e8f0",
+                            borderColor: "#0f172a",
+                            color: "#0f172a",
+                          }
+                        : hasResponse && assignedCat
+                        ? {
+                            backgroundColor: hexToRgba(catColor, 0.2),
+                            borderColor: respColor,
+                            color: "#0f172a",
+                          }
+                        : hasResponse
+                        ? {
+                            backgroundColor: "#ffffff",
+                            borderColor: respColor,
+                            color: "#1e293b",
+                          }
+                        : assignedCat
                         ? {
                             backgroundColor: hexToRgba(catColor, 0.2),
                             borderColor: catColor,
@@ -572,9 +688,11 @@ export const PreviewPanel: React.FC = () => {
                     <div
                       className="flex min-h-0 flex-1 flex-col overflow-hidden"
                       style={
-                        assignedCat
+                        assignedCat && (survey.selectionMode === "dropdown" || hasResponse)
                           ? { borderBottom: `1px solid ${hexToRgba(catColor, 0.4)}` }
-                          : { borderBottom: "1px solid #e2e8f0" }
+                          : !assignedCat && survey.selectionMode === "dropdown"
+                          ? { borderBottom: "1px solid #e2e8f0" }
+                          : undefined
                       }
                     >
                       {assignedCat ? (
@@ -585,24 +703,15 @@ export const PreviewPanel: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    {/* Response dropdown — bottom portion */}
-                    {responseLabels.length > 0 && (
+                    {/* Dropdown mode — response select */}
+                    {survey.selectionMode === "dropdown" && responseLabels.length > 0 && (
                       <div className="flex-shrink-0 p-0.5">
                         <select
                           aria-label={`Response for row ${cell.row} column ${cell.col}`}
-                          value={responses[cell.exportKey] ?? ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setResponses((prev) => {
-                              const next = { ...prev };
-                              if (!val) {
-                                delete next[cell.exportKey];
-                              } else {
-                                next[cell.exportKey] = val;
-                              }
-                              return next;
-                            });
-                          }}
+                          value={selectedResponse}
+                          onChange={(e) =>
+                            applyResponse(cell.exportKey, e.target.value || null)
+                          }
                           className="w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-[9px] text-slate-900 outline-none focus:border-sky-500"
                         >
                           <option value="">— react —</option>
@@ -612,6 +721,30 @@ export const PreviewPanel: React.FC = () => {
                             </option>
                           ))}
                         </select>
+                      </div>
+                    )}
+                    {/* Paint / drag-drop mode — response indicator when applied */}
+                    {survey.selectionMode !== "dropdown" && hasResponse && (
+                      <div
+                        className="flex flex-shrink-0 flex-col items-center overflow-hidden px-0.5 pb-0.5"
+                        style={{
+                          backgroundColor: hexToRgba(respColor, 0.15),
+                          borderTop: `1px solid ${hexToRgba(respColor, 0.4)}`,
+                        }}
+                      >
+                        {respImage && (
+                          <img
+                            src={respImage}
+                            alt={selectedResponse}
+                            className="mt-0.5 max-h-4 max-w-full object-contain"
+                          />
+                        )}
+                        <span
+                          className="w-full truncate text-center text-[8px] font-semibold leading-tight"
+                          style={{ color: respColor }}
+                        >
+                          {selectedResponse}
+                        </span>
                       </div>
                     )}
                   </div>

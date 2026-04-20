@@ -46,6 +46,7 @@ function makeBaseConfig(): GridConfig {
       fixedAssignments: {},
       weightedEntries: [],
       responseLabelsCsv: "",
+      responseLabelMeta: {},
     },
   };
 }

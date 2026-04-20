@@ -21,6 +21,39 @@ const CATEGORY_PALETTE = [
   "#fb7185", // rose
 ];
 
+/** Sync responseLabelMeta when the CSV changes: keep existing entries, add new ones with palette colors. */
+export function syncResponseLabelMeta(
+  csv: string,
+  existing: Record<string, CategoryMeta>,
+): Record<string, CategoryMeta> {
+  const names = csv
+    .split(",")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const usedColors = new Set(Object.values(existing).map((m) => m.color));
+  let paletteIdx = 0;
+
+  const next: Record<string, CategoryMeta> = {};
+  for (const name of names) {
+    if (existing[name]) {
+      next[name] = existing[name];
+    } else {
+      while (
+        paletteIdx < CATEGORY_PALETTE.length &&
+        usedColors.has(CATEGORY_PALETTE[paletteIdx])
+      ) {
+        paletteIdx++;
+      }
+      const color = CATEGORY_PALETTE[paletteIdx % CATEGORY_PALETTE.length];
+      usedColors.add(color);
+      paletteIdx++;
+      next[name] = { color, imageUrl: "" };
+    }
+  }
+  return next;
+}
+
 function defaultExperimental(): ExperimentalConfig {
   return {
     enabled: false,
@@ -28,6 +61,7 @@ function defaultExperimental(): ExperimentalConfig {
     fixedAssignments: {},
     weightedEntries: [],
     responseLabelsCsv: "",
+    responseLabelMeta: {},
   };
 }
 
@@ -82,6 +116,10 @@ export function normalizeConfig(config: GridConfig): GridConfig {
       ...existingExp,
       fixedAssignments: existingExp.fixedAssignments ?? {},
       weightedEntries: existingExp.weightedEntries ?? [],
+      responseLabelMeta: syncResponseLabelMeta(
+        existingExp.responseLabelsCsv ?? "",
+        existingExp.responseLabelMeta ?? {},
+      ),
     },
   };
 }
@@ -210,6 +248,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         ...state.config.experimental!,
         ...action.patch,
       };
+      if (action.patch.responseLabelsCsv !== undefined) {
+        merged.responseLabelMeta = syncResponseLabelMeta(
+          action.patch.responseLabelsCsv,
+          merged.responseLabelMeta,
+        );
+      }
       return { ...state, config: { ...state.config, experimental: merged } };
     }
     default:

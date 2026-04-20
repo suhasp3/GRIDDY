@@ -90,6 +90,7 @@ function makeConfig(overrides: Partial<GridConfig> = {}): GridConfig {
       fixedAssignments: {},
       weightedEntries: [],
       responseLabelsCsv: "",
+      responseLabelMeta: {},
     },
     ...overrides,
   };

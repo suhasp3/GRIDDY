@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useEditor } from "../EditorContext";
 import { ExperimentalConfig } from "../grid-types";
 
@@ -37,9 +37,16 @@ export const SurveyTab: React.FC = () => {
     dispatch({ type: "updateExperimental", patch });
   };
 
+  const [advancedResponseLabels, setAdvancedResponseLabels] = useState(false);
+
   const categories = survey.categoriesCsv
     .split(",")
     .map((c) => c.trim())
+    .filter(Boolean);
+
+  const responseLabels = experimental.responseLabelsCsv
+    .split(",")
+    .map((l) => l.trim())
     .filter(Boolean);
 
   const getWeight = (cat: string) =>
@@ -93,43 +100,37 @@ export const SurveyTab: React.FC = () => {
         </button>
       </div>
 
-      {/* --- Standard mode settings --- */}
-      {!experimental.enabled && (
-        <>
-          <fieldset className="rounded-md border border-slate-200 p-4">
-              <legend className="px-1 text-sm font-semibold text-slate-700">
-                Selection mode
-              </legend>
-              <div className="mt-2 flex flex-col gap-2">
-                {selectionModeOptions.map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    <input
-                      type="radio"
-                      name="selectionMode"
-                      value={option.value}
-                      checked={survey.selectionMode === option.value}
-                      onChange={() =>
-                        updateSurvey({ selectionMode: option.value })
-                      }
-                      className="mt-1 h-4 w-4 border-slate-300"
-                    />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium text-slate-800">
-                        {option.label}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {option.description}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-        </>
-      )}
+      {/* --- Selection mode (always visible) --- */}
+      <fieldset className="rounded-md border border-slate-200 p-4">
+        <legend className="px-1 text-sm font-semibold text-slate-700">
+          {experimental.enabled ? "Respondent input method" : "Selection mode"}
+        </legend>
+        <div className="mt-2 flex flex-col gap-2">
+          {selectionModeOptions.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 hover:border-slate-300 hover:bg-slate-50"
+            >
+              <input
+                type="radio"
+                name="selectionMode"
+                value={option.value}
+                checked={survey.selectionMode === option.value}
+                onChange={() => updateSurvey({ selectionMode: option.value })}
+                className="mt-1 h-4 w-4 border-slate-300"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium text-slate-800">
+                  {option.label}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {option.description}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       {/* --- Experimental mode settings --- */}
       {experimental.enabled && (
@@ -249,9 +250,81 @@ export const SurveyTab: React.FC = () => {
               }
             />
             <p className="text-xs text-slate-500">
-              These appear as a dropdown in each pre-filled cell for respondents to react.
+              These are the reactions respondents can place on pre-filled cells.
             </p>
           </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300"
+              checked={advancedResponseLabels}
+              onChange={(e) => setAdvancedResponseLabels(e.target.checked)}
+            />
+            <span className="font-medium">Response Label Colors and Images</span>
+          </label>
+
+          {advancedResponseLabels && responseLabels.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {responseLabels.map((lbl) => {
+                const meta = experimental.responseLabelMeta?.[lbl] ?? {
+                  color: "#8b5cf6",
+                  imageUrl: "",
+                };
+                return (
+                  <div
+                    key={lbl}
+                    className="rounded-md border border-slate-200 p-3 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: meta.color }}
+                      />
+                      <span className="text-sm font-medium">{lbl}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 text-xs text-slate-600">
+                        Color
+                        <input
+                          type="color"
+                          value={meta.color}
+                          onChange={(e) =>
+                            updateExperimental({
+                              responseLabelMeta: {
+                                ...experimental.responseLabelMeta,
+                                [lbl]: { ...meta, color: e.target.value },
+                              },
+                            })
+                          }
+                          className="h-7 w-10 cursor-pointer rounded border border-slate-300 p-0.5"
+                        />
+                      </label>
+                    </div>
+
+                    <label className="flex flex-col gap-1 text-xs text-slate-600">
+                      Image URL
+                      <input
+                        type="url"
+                        placeholder="https://example.com/image.png"
+                        value={meta.imageUrl}
+                        onChange={(e) =>
+                          updateExperimental({
+                            responseLabelMeta: {
+                              ...experimental.responseLabelMeta,
+                              [lbl]: { ...meta, imageUrl: e.target.value },
+                            },
+                          })
+                        }
+                        className="rounded-md border border-slate-300 px-2 py-1.5 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                      />
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
 
