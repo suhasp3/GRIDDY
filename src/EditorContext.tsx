@@ -32,7 +32,7 @@ function defaultExperimental(): ExperimentalConfig {
 }
 
 /** Sync categoryMeta when the CSV changes: keep existing entries, add new ones with palette colors. */
-function syncCategoryMeta(
+export function syncCategoryMeta(
   csv: string,
   existing: Record<string, CategoryMeta>,
 ): Record<string, CategoryMeta> {
@@ -64,7 +64,7 @@ function syncCategoryMeta(
   return next;
 }
 
-function normalizeConfig(config: GridConfig): GridConfig {
+export function normalizeConfig(config: GridConfig): GridConfig {
   const categoriesCsv = config.survey.categoriesCsv ?? "";
   const existingExp: Partial<ExperimentalConfig> = config.experimental ?? {};
   return {
@@ -145,7 +145,7 @@ function createDefaultConfig(): GridConfig {
   };
 }
 
-function editorReducer(state: EditorState, action: EditorAction): EditorState {
+export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case "setConfig":
       return { ...state, config: normalizeConfig(action.config) };
