@@ -14,7 +14,7 @@ Team B: Ishita Siddamreddy, Suhas Puttoju, Katun Li, and Michael Jenkins.
 - Configure survey categories, labels, colors, and interaction behavior.
 - Save surveys locally or to a signed-in account.
 - Export saved surveys as JSON backups.
-- Export Qualtrics JavaScript for single or multi-question survey flows.
+- Export a ready-to-import Qualtrics `.qsf` (single grid or a multi-grid bundle) — no manual question/field setup required.
 
 ## Tech Stack
 
@@ -90,14 +90,27 @@ Runs the Vitest test suite.
 
 ## Qualtrics Workflow
 
-1. Build and preview a grid in GRIDDY.
+The recommended path is a one-click `.qsf` import — GRIDDY builds the entire
+survey for you (question, JavaScript, and embedded-data fields), so there is no
+manual setup in Qualtrics.
+
+1. Build and preview a grid in GRIDDY (works for standard and experimental modes).
 2. Save the survey if you want to reuse or edit it later.
-3. Click the Qualtrics export option.
-4. Copy the generated JavaScript.
-5. In Qualtrics, create or open a survey question.
-6. Open that question's JavaScript editor.
-7. Paste the generated GRIDDY script.
-8. Preview the Qualtrics survey before sending it to respondents.
+3. Click **Export to Qualtrics**, then **Download .qsf**. (On the *My Surveys*
+   page you can select multiple saved surveys and export them all into one
+   `.qsf`, one grid per page.)
+4. In Qualtrics, go to **Projects → Create project → Survey → "Import a QSF file"**
+   and select the downloaded `.qsf`.
+5. **Publish.** The grid renders and saves responses automatically into the
+   pre-created embedded-data fields (`GridAssignments`, or `GridPrefills` /
+   `GridResponses` in experimental mode), visible under **Data & Analysis**.
+
+### Manual fallback
+
+To paste into an existing survey instead, use **Copy code** in the export
+dialog: add an Embedded Data element with the listed field(s) to your Survey
+Flow, add a Text/Graphic question, and paste the script into its JavaScript
+editor.
 
 ## Deployment
 

@@ -1,7 +1,12 @@
 import { GridConfig } from "../grid-types";
 
 export interface QualtricsExportOptions {
+  /** Embedded data field used in standard (non-experimental) mode. */
   embeddedDataField?: string;
+  /** Embedded data field for experimental pre-fills (what was shown). */
+  prefillsField?: string;
+  /** Embedded data field for experimental responses (what was selected). */
+  responsesField?: string;
 }
 
 export interface QualtricsMultiQuestionItem {
@@ -28,6 +33,8 @@ export function buildQualtricsSnippet(
   options: QualtricsExportOptions = {},
 ): string {
   const embeddedDataField = options.embeddedDataField ?? "GridAssignments";
+  const prefillsField = options.prefillsField ?? "GridPrefills";
+  const responsesField = options.responsesField ?? "GridResponses";
   const exportConfig = {
     layout: config.layout,
     tuning: config.tuning,
@@ -100,8 +107,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 
 	function persistAll() {
 		if (isExperimental) {
-			Qualtrics.SurveyEngine.setEmbeddedData("GridPrefills", JSON.stringify(prefills));
-			Qualtrics.SurveyEngine.setEmbeddedData("GridResponses", JSON.stringify(experimentalResponses));
+			Qualtrics.SurveyEngine.setEmbeddedData(${JSON.stringify(prefillsField)}, JSON.stringify(prefills));
+			Qualtrics.SurveyEngine.setEmbeddedData(${JSON.stringify(responsesField)}, JSON.stringify(experimentalResponses));
 		} else {
 			Qualtrics.SurveyEngine.setEmbeddedData(${JSON.stringify(embeddedDataField)}, JSON.stringify(assignments));
 		}
@@ -692,6 +699,357 @@ Qualtrics.SurveyEngine.addOnUnload(function()
 	/* Optional: code to run when the page is unloaded */
 
 });`;
+}
+
+/* ------------------------------------------------------------------ *
+ * QSF (Qualtrics Survey Format) export
+ *
+ * A .qsf file is a JSON document Qualtrics can import directly via
+ * Projects -> Create project -> Survey -> "From a file". Importing it
+ * builds the whole survey for the researcher: one Text/Graphic question
+ * per grid (with the rendering JavaScript already attached), every
+ * embedded-data field pre-declared in the Survey Flow, and each grid on
+ * its own page. No manual question/field/JS setup required.
+ * ------------------------------------------------------------------ */
+
+export interface QualtricsQsfItem {
+  /** Human-readable title used for the block description. */
+  title: string;
+  config: GridConfig;
+  /** Standard-mode field name. Defaults to "GridAssignments". */
+  embeddedDataField?: string;
+  /** Experimental-mode pre-fill field. Defaults to "GridPrefills". */
+  prefillsField?: string;
+  /** Experimental-mode response field. Defaults to "GridResponses". */
+  responsesField?: string;
+}
+
+function isExperimentalConfig(config: GridConfig): boolean {
+  return !!(config.experimental && config.experimental.enabled);
+}
+
+/** Embedded-data field names a given item will write to, in display order. */
+export function qsfEmbeddedFields(item: QualtricsQsfItem): string[] {
+  if (isExperimentalConfig(item.config)) {
+    return [
+      item.prefillsField ?? "GridPrefills",
+      item.responsesField ?? "GridResponses",
+    ];
+  }
+  return [item.embeddedDataField ?? "GridAssignments"];
+}
+
+function randomQualtricsId(prefix: string): string {
+  const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let id = "";
+  for (let i = 0; i < 15; i++) {
+    id += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return prefix + id;
+}
+
+function randomUuid(): string {
+  const hex = "0123456789abcdef";
+  let out = "";
+  for (let i = 0; i < 36; i++) {
+    if (i === 8 || i === 13 || i === 18 || i === 23) {
+      out += "-";
+    } else if (i === 14) {
+      out += "4";
+    } else if (i === 19) {
+      out += hex[8 + Math.floor(Math.random() * 4)];
+    } else {
+      out += hex[Math.floor(Math.random() * 16)];
+    }
+  }
+  return out;
+}
+
+function formatQualtricsDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
+}
+
+/**
+ * Build a complete .qsf document (as a JSON string) containing one
+ * Text/Graphic question per item, with the grid JavaScript attached and
+ * all embedded-data fields declared in the Survey Flow. Works for
+ * standard, experimental, and multi-survey bundles.
+ *
+ * `brandId` only needs to be a non-empty string to satisfy the importer's
+ * schema validation — Qualtrics reassigns the survey to the importing
+ * account's brand regardless of this value.
+ */
+export function buildQualtricsQsf(
+  items: QualtricsQsfItem[],
+  surveyName = "GRIDDY Survey",
+  brandId = "GRIDDY",
+): string {
+  const surveyId = randomQualtricsId("SV_");
+  const creatorId = randomQualtricsId("UR_");
+  const responseSetId = randomQualtricsId("RS_");
+  const quotaGroupId = randomQualtricsId("QG_");
+  const previewId = randomUuid();
+  const timestamp = formatQualtricsDate(new Date());
+
+  const questionElements: unknown[] = [];
+  const blocks: Array<{ id: string; block: unknown }> = [];
+  const embeddedData: unknown[] = [];
+  const seenFields = new Set<string>();
+
+  items.forEach((item, index) => {
+    const qid = `QID${index + 1}`;
+    const fields = qsfEmbeddedFields(item);
+    const snippet = isExperimentalConfig(item.config)
+      ? buildQualtricsSnippet(item.config, {
+          prefillsField: fields[0],
+          responsesField: fields[1],
+        })
+      : buildQualtricsSnippet(item.config, { embeddedDataField: fields[0] });
+
+    const questionText =
+      item.config.layout.questionText || item.title || `Grid question ${index + 1}`;
+
+    questionElements.push({
+      SurveyID: surveyId,
+      Element: "SQ",
+      PrimaryAttribute: qid,
+      SecondaryAttribute: questionText,
+      TertiaryAttribute: null,
+      Payload: {
+        QuestionText: questionText,
+        DefaultChoices: false,
+        DataExportTag: `Q${index + 1}`,
+        QuestionType: "DB",
+        Selector: "TB",
+        DataVisibility: { Private: false, Hidden: false },
+        Configuration: { QuestionDescriptionOption: "UseText" },
+        QuestionDescription: questionText,
+        ChoiceOrder: [],
+        Validation: { Settings: { Type: "None" } },
+        GradingData: [],
+        Language: [],
+        NextChoiceId: 1,
+        NextAnswerId: 1,
+        QuestionID: qid,
+        QuestionJS: snippet,
+      },
+    });
+
+    const blockId = randomQualtricsId("BL_");
+    blocks.push({
+      id: blockId,
+      block: {
+        Type: index === 0 ? "Default" : "Standard",
+        Description: item.title || `Grid question ${index + 1}`,
+        ID: blockId,
+        BlockElements: [{ Type: "Question", QuestionID: qid }],
+      },
+    });
+
+    fields.forEach((field) => {
+      if (seenFields.has(field)) return;
+      seenFields.add(field);
+      embeddedData.push({
+        Description: field,
+        Type: "Recipient",
+        Field: field,
+        VariableType: "String",
+        DataVisibility: [],
+        AnalyzeText: false,
+      });
+    });
+  });
+
+  // Survey Flow: declare embedded data first, then walk each block in order.
+  // Root reserves FL_1; child flow elements start at FL_2.
+  let flowCounter = 1;
+  const nextFlowId = () => `FL_${++flowCounter}`;
+  const flow: unknown[] = [];
+  if (embeddedData.length > 0) {
+    flow.push({
+      Type: "EmbeddedData",
+      FlowID: nextFlowId(),
+      EmbeddedData: embeddedData,
+    });
+  }
+  blocks.forEach(({ id }) => {
+    flow.push({ Type: "Block", ID: id, FlowID: nextFlowId(), Autofill: [] });
+  });
+
+  // BL Payload is a JSON array of block objects (matches real exports).
+  const blockPayload = blocks.map(({ block }) => block);
+
+  // Element set and ordering mirror a real Qualtrics .qsf export.
+  const surveyElements: unknown[] = [
+    {
+      SurveyID: surveyId,
+      Element: "BL",
+      PrimaryAttribute: "Survey Blocks",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: blockPayload,
+    },
+    {
+      SurveyID: surveyId,
+      Element: "FL",
+      PrimaryAttribute: "Survey Flow",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: {
+        Type: "Root",
+        FlowID: "FL_1",
+        Flow: flow,
+        Properties: { Count: flowCounter },
+      },
+    },
+    {
+      SurveyID: surveyId,
+      Element: "PL",
+      PrimaryAttribute: "Preview Link",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: { PreviewType: "Brand", PreviewID: previewId },
+    },
+    {
+      SurveyID: surveyId,
+      Element: "PROJ",
+      PrimaryAttribute: "CORE",
+      SecondaryAttribute: null,
+      TertiaryAttribute: "1.1.0",
+      Payload: { ProjectCategory: "CORE", SchemaVersion: "1.1.0" },
+    },
+    {
+      SurveyID: surveyId,
+      Element: "QC",
+      PrimaryAttribute: "Survey Question Count",
+      SecondaryAttribute: String(items.length),
+      TertiaryAttribute: null,
+      Payload: null,
+    },
+    {
+      SurveyID: surveyId,
+      Element: "QG",
+      PrimaryAttribute: quotaGroupId,
+      SecondaryAttribute: "Default Quota Group",
+      TertiaryAttribute: null,
+      Payload: {
+        ID: quotaGroupId,
+        Name: "Default Quota Group",
+        Selected: true,
+        MultipleMatch: "PlaceInAll",
+        Public: false,
+        Quotas: [],
+      },
+    },
+    {
+      SurveyID: surveyId,
+      Element: "QGO",
+      PrimaryAttribute: "QGO_QuotaGroupOrder",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: [quotaGroupId],
+    },
+    {
+      SurveyID: surveyId,
+      Element: "RS",
+      PrimaryAttribute: responseSetId,
+      SecondaryAttribute: "Default Response Set",
+      TertiaryAttribute: null,
+      Payload: null,
+    },
+    {
+      SurveyID: surveyId,
+      Element: "SCO",
+      PrimaryAttribute: "Scoring",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: {
+        ScoringCategories: [],
+        ScoringCategoryGroups: [],
+        ScoringSummaryCategory: null,
+        ScoringSummaryAfterQuestions: 0,
+        ScoringSummaryAfterSurvey: 0,
+        DefaultScoringCategory: null,
+        AutoScoringCategory: null,
+      },
+    },
+    {
+      SurveyID: surveyId,
+      Element: "SO",
+      PrimaryAttribute: "Survey Options",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: {
+        BackButton: "false",
+        SaveAndContinue: "true",
+        SurveyProtection: "PublicSurvey",
+        BallotBoxStuffingPrevention: "false",
+        NoIndex: "Yes",
+        SecureResponseFiles: "true",
+        SurveyExpiration: "None",
+        SurveyTermination: "DefaultMessage",
+        Header: "",
+        Footer: "",
+        ProgressBarDisplay: "None",
+        PartialData: "+1 week",
+        ValidationMessage: "",
+        PreviousButton: "",
+        NextButton: "",
+        SurveyTitle: surveyName,
+        NewScoring: 1,
+      },
+    },
+    ...questionElements,
+    {
+      SurveyID: surveyId,
+      Element: "STAT",
+      PrimaryAttribute: "Survey Statistics",
+      SecondaryAttribute: null,
+      TertiaryAttribute: null,
+      Payload: { MobileCompatible: true, ID: "Survey Statistics" },
+    },
+  ];
+
+  const qsf = {
+    SurveyEntry: {
+      SurveyID: surveyId,
+      SurveyName: surveyName,
+      SurveyDescription: null,
+      SurveyOwnerID: creatorId,
+      SurveyBrandID: brandId || "GRIDDY",
+      DivisionID: null,
+      SurveyLanguage: "EN",
+      SurveyActiveResponseSet: responseSetId,
+      SurveyStatus: "Inactive",
+      SurveyStartDate: "0000-00-00 00:00:00",
+      SurveyExpirationDate: "0000-00-00 00:00:00",
+      SurveyCreationDate: timestamp,
+      CreatorID: creatorId,
+      LastModified: timestamp,
+      LastAccessed: "0000-00-00 00:00:00",
+      LastActivated: "0000-00-00 00:00:00",
+      Deleted: null,
+    },
+    SurveyElements: surveyElements,
+  };
+
+  return JSON.stringify(qsf, null, 2);
+}
+
+/** Convenience wrapper to build a .qsf for a single grid configuration. */
+export function buildQualtricsQsfForConfig(
+  config: GridConfig,
+  surveyName?: string,
+): string {
+  const name = surveyName || config.name || "GRIDDY Survey";
+  return buildQualtricsQsf(
+    [{ title: config.name || name, config }],
+    name,
+  );
 }
 
 export function buildQualtricsMultiQuestionSnippet(

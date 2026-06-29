@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useEditor } from "../EditorContext";
 import { LayerMode, WeightEntry } from "../grid-types";
-import { buildQualtricsSnippet } from "../lib/qualtricsExport";
+import {
+  buildQualtricsSnippet,
+  buildQualtricsQsfForConfig,
+} from "../lib/qualtricsExport";
 
 function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -345,6 +348,17 @@ export const PreviewPanel: React.FC = () => {
   };
 
   const qualtricsSnippet = useMemo(() => buildQualtricsSnippet(config), [config]);
+  const qualtricsQsf = useMemo(
+    () => buildQualtricsQsfForConfig(config),
+    [config],
+  );
+  const exportFields = useMemo(
+    () =>
+      expEnabled
+        ? ["GridPrefills", "GridResponses"]
+        : ["GridAssignments"],
+    [expEnabled],
+  );
 
   const handleCopy = async () => {
     try {
@@ -354,6 +368,24 @@ export const PreviewPanel: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleDownloadQsf = () => {
+    const safeName =
+      (config.name || "griddy-survey")
+        .trim()
+        .replace(/[^A-Za-z0-9_-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "") || "griddy-survey";
+    const blob = new Blob([qualtricsQsf], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeName}.qsf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   // Toolbar visibility
@@ -965,10 +997,17 @@ export const PreviewPanel: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={handleDownloadQsf}
+                  className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                >
+                  Download .qsf
+                </button>
+                <button
+                  type="button"
                   onClick={handleCopy}
                   className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
-                  {copied ? "Copied!" : "Copy"}
+                  {copied ? "Copied!" : "Copy code"}
                 </button>
                 <button
                   type="button"
@@ -985,7 +1024,7 @@ export const PreviewPanel: React.FC = () => {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
                       <span className="font-mono text-base">{`</>`}</span>
-                      <span>Code</span>
+                      <span>Raw JavaScript (manual paste fallback)</span>
                     </div>
                   </div>
                   <textarea
@@ -996,75 +1035,88 @@ export const PreviewPanel: React.FC = () => {
                   />
                 </div>
               </div>
-              <aside className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
-                <h4 className="text-sm font-semibold">Qualtrics setup</h4>
-                {expEnabled ? (
-                  <ol className="flex flex-col gap-2">
-                    <li>
-                      In Qualtrics, open <strong>Survey</strong>, then{" "}
-                      <strong>Survey Flow</strong>.
-                    </li>
-                    <li>
-                      Add an <strong>Embedded Data</strong> element before this question.
-                    </li>
-                    <li>
-                      Create two fields:{" "}
-                      <code className="rounded bg-amber-100 px-1 font-mono font-bold">
-                        GridPrefills
-                      </code>{" "}
-                      (what was shown) and{" "}
-                      <code className="rounded bg-amber-100 px-1 font-mono font-bold">
-                        GridResponses
-                      </code>{" "}
-                      (what the respondent selected). Leave both blank.
-                    </li>
-                    <li>
-                      Go back to the question, open <strong>JavaScript</strong> under
-                      question behavior, and paste the code.
-                    </li>
-                    <li>
-                      Export results from <strong>Data &amp; Analysis</strong>.
-                      Pre-fills are saved as{" "}
-                      <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>{" "}
-                      and responses as{" "}
-                      <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Good"}`}</code>.
-                    </li>
-                  </ol>
-                ) : (
-                  <ol className="flex flex-col gap-2">
-                    <li>
-                      In Qualtrics, open <strong>Survey</strong>, then{" "}
-                      <strong>Survey Flow</strong>.
-                    </li>
-                    <li>
-                      Add an <strong>Embedded Data</strong> element before this question.
-                    </li>
-                    <li>
-                      Create a field named{" "}
-                      <code className="rounded bg-amber-100 px-1 font-mono font-bold">
-                        GridAssignments
-                      </code>{" "}
-                      and leave it blank.
-                    </li>
-                    <li>
-                      Go back to the question, open <strong>JavaScript</strong> under
-                      question behavior, and paste the code.
-                    </li>
-                    <li>
-                      Export results from <strong>Data &amp; Analysis</strong>. Responses
-                      are saved as JSON like{" "}
-                      <code className="rounded bg-amber-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>.
-                    </li>
-                  </ol>
-                )}
-                <p>
-                  If you have multiple grid questions, rename the embedded field(s) to
-                  something unique like{" "}
-                  <code className="rounded bg-amber-100 px-1 font-mono">
-                    {expEnabled ? "GridPrefills_Q2" : "GridAssignments_Q2"}
-                  </code>
-                  .
-                </p>
+              <aside className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">
+                <div>
+                  <h4 className="text-sm font-semibold">
+                    Recommended: import the .qsf
+                  </h4>
+                  <p className="mt-1 text-emerald-800">
+                    The downloaded file builds the entire survey for you — the
+                    question, the JavaScript, and the embedded-data fields are
+                    all set up automatically. No copy-pasting.
+                  </p>
+                </div>
+                <ol className="flex flex-col gap-2">
+                  <li>
+                    Click <strong>Download .qsf</strong> above.
+                  </li>
+                  <li>
+                    In Qualtrics, go to <strong>Projects</strong> &rarr;{" "}
+                    <strong>Create project</strong> &rarr; <strong>Survey</strong>.
+                  </li>
+                  <li>
+                    Choose <strong>“Import a QSF file”</strong>, select the
+                    downloaded <code className="rounded bg-emerald-100 px-1 font-mono">.qsf</code>, and create the project.
+                  </li>
+                  <li>
+                    <strong>Publish</strong>. That's it — the grid renders and
+                    saves responses automatically.
+                  </li>
+                </ol>
+                <div className="rounded-md border border-emerald-200 bg-white/60 p-2">
+                  <p className="font-medium">Results land in these fields:</p>
+                  <ul className="mt-1 flex flex-col gap-0.5">
+                    {expEnabled ? (
+                      <>
+                        <li>
+                          <code className="rounded bg-emerald-100 px-1 font-mono font-bold">
+                            GridPrefills
+                          </code>{" "}
+                          — what was shown, e.g.{" "}
+                          <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>
+                        </li>
+                        <li>
+                          <code className="rounded bg-emerald-100 px-1 font-mono font-bold">
+                            GridResponses
+                          </code>{" "}
+                          — what the respondent selected, e.g.{" "}
+                          <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Good"}`}</code>
+                        </li>
+                      </>
+                    ) : (
+                      <li>
+                        <code className="rounded bg-emerald-100 px-1 font-mono font-bold">
+                          GridAssignments
+                        </code>{" "}
+                        — e.g.{" "}
+                        <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>
+                      </li>
+                    )}
+                  </ul>
+                  <p className="mt-1.5 text-emerald-700">
+                    Find them under <strong>Data &amp; Analysis</strong> after
+                    collecting responses.
+                  </p>
+                </div>
+                <details className="rounded-md border border-emerald-200 bg-white/60 p-2">
+                  <summary className="cursor-pointer font-medium">
+                    Prefer to paste into an existing survey?
+                  </summary>
+                  <p className="mt-1 text-emerald-800">
+                    Use <strong>Copy code</strong> instead. Add an Embedded Data
+                    element to your Survey Flow with{" "}
+                    {exportFields.map((f, i) => (
+                      <span key={f}>
+                        {i > 0 && " and "}
+                        <code className="rounded bg-emerald-100 px-1 font-mono">
+                          {f}
+                        </code>
+                      </span>
+                    ))}
+                    , add a Text/Graphic question, and paste the code into its{" "}
+                    <strong>JavaScript</strong> editor.
+                  </p>
+                </details>
               </aside>
             </div>
           </div>
