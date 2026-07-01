@@ -474,6 +474,7 @@ export const ConfigPanel: React.FC = () => {
             addLabel="+ Add category"
             editorTitle="EDITING CATEGORY"
             showLayerMode
+            showClearAll
           />
         </section>
 
@@ -564,6 +565,7 @@ export const ConfigPanel: React.FC = () => {
           addLabel="+ Add category"
           editorTitle="EDITING CATEGORY"
           showLayerMode
+          showClearAll
         />
       </SummaryRow>
 
@@ -698,6 +700,7 @@ export const ConfigPanel: React.FC = () => {
             addLabel="+ Add label"
             editorTitle="EDITING LABEL"
             showLayerMode
+            showClearAll
           />
         </div>
       </div>

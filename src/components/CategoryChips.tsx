@@ -20,6 +20,7 @@ interface Props {
   addLabel?: string;
   editorTitle?: string;
   showLayerMode?: boolean;
+  showClearAll?: boolean;
 }
 
 export const CategoryChips: React.FC<Props> = ({
@@ -28,6 +29,7 @@ export const CategoryChips: React.FC<Props> = ({
   addLabel = "+ Add",
   editorTitle = "EDITING",
   showLayerMode = false,
+  showClearAll = false,
 }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -39,6 +41,11 @@ export const CategoryChips: React.FC<Props> = ({
 
   const remove = (idx: number) => {
     onChange(items.filter((_, i) => i !== idx));
+    setOpenIndex(null);
+  };
+
+  const clearAll = () => {
+    onChange([]);
     setOpenIndex(null);
   };
 
@@ -91,6 +98,15 @@ export const CategoryChips: React.FC<Props> = ({
         >
           {addLabel}
         </button>
+        {showClearAll && items.length > 0 && (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-ink-faint transition-colors hover:text-accent"
+          >
+            Clear all
+          </button>
+        )}
       </div>
 
       {open != null && openIndex != null && (

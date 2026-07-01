@@ -388,7 +388,7 @@ export const SurveyTab: React.FC = () => {
         <input
           type="text"
           className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          placeholder="Dwarves, Elves, Hobbits, Rohirrim"
+          placeholder="Family, Friends, Coworkers, Neighbors"
           value={survey.categoriesCsv}
           onChange={(e) => updateSurvey({ categoriesCsv: e.target.value })}
         />

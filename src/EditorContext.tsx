@@ -54,14 +54,16 @@ export function syncResponseLabelMeta(
   return next;
 }
 
+const DEFAULT_RESPONSE_LABELS = "Agree, Neutral, Disagree";
+
 function defaultExperimental(): ExperimentalConfig {
   return {
     enabled: false,
     prefillMode: "fixed",
     fixedAssignments: {},
     weightedEntries: [],
-    responseLabelsCsv: "",
-    responseLabelMeta: {},
+    responseLabelsCsv: DEFAULT_RESPONSE_LABELS,
+    responseLabelMeta: syncResponseLabelMeta(DEFAULT_RESPONSE_LABELS, {}),
   };
 }
 
@@ -164,7 +166,7 @@ function createDefaultConfig(): GridConfig {
     previewHeight: 550,
   };
 
-  const defaultCsv = "Dwarves, Elves, Hobbits, Rohirrim";
+  const defaultCsv = "Family, Friends, Coworkers, Neighbors";
   const survey: SurveyConfig = {
     categoriesCsv: defaultCsv,
     allowInteraction: true,

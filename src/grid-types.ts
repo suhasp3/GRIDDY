@@ -32,7 +32,7 @@ export interface CategoryMeta {
 export type SelectionMode = "paint" | "dropdown" | "dragdrop";
 
 export interface SurveyConfig {
-  /** Comma-separated list of category labels, e.g. "Dwarves, Elves, Hobbits" */
+  /** Comma-separated list of category labels, e.g. "Family, Friends, Coworkers" */
   categoriesCsv: string;
   /** Whether participants can interact with the grid (vs static display only). */
   allowInteraction: boolean;

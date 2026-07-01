@@ -1055,7 +1055,7 @@ export const PreviewPanel: React.FC = () => {
                               GridPrefills
                             </code>{" "}
                             — what was shown, e.g.{" "}
-                            <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>
+                            <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Family"}`}</code>
                           </li>
                           <li>
                             <code className="rounded bg-emerald-100 px-1 font-mono font-bold">
@@ -1071,7 +1071,7 @@ export const PreviewPanel: React.FC = () => {
                             GridAssignments
                           </code>{" "}
                           — e.g.{" "}
-                          <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Dwarves"}`}</code>
+                          <code className="rounded bg-emerald-100 px-1 font-mono">{`{"r1-c1":"Family"}`}</code>
                         </li>
                       )}
                     </ul>
