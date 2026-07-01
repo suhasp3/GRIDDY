@@ -388,6 +388,27 @@ export const ConfigPanel: React.FC = () => {
     });
   };
 
+  // Seed every category to a weight of 1 the first time weighted prefill is
+  // active, so the default is an even spread (weights are normalized at runtime).
+  const weightCategoriesKey = categories.join("|");
+  useEffect(() => {
+    if (experimental.prefillMode !== "weighted" || categories.length === 0) {
+      return;
+    }
+    const hasAny = categories.some((c) =>
+      experimental.weightedEntries.some((e) => e.category === c),
+    );
+    if (!hasAny) {
+      dispatch({
+        type: "updateExperimental",
+        patch: {
+          weightedEntries: categories.map((category) => ({ category, weight: 1 })),
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experimental.prefillMode, weightCategoriesKey]);
+
   // Summaries for collapsed rows
   const questionSummary = `"${layout.questionText.slice(0, 38)}${
     layout.questionText.length > 38 ? "…" : ""

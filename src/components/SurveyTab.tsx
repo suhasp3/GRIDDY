@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useEditor } from "../EditorContext";
 import { ExperimentalConfig } from "../grid-types";
 
@@ -72,6 +72,24 @@ export const SurveyTab: React.FC = () => {
 
     setWeight(cat, Math.max(0, parsed));
   };
+
+  // Seed every category to a weight of 1 the first time weighted prefill is
+  // active, so the default is an even spread (weights are normalized at runtime).
+  const categoriesKey = categories.join("|");
+  useEffect(() => {
+    if (experimental.prefillMode !== "weighted" || categories.length === 0) {
+      return;
+    }
+    const hasAny = categories.some((c) =>
+      experimental.weightedEntries.some((e) => e.category === c),
+    );
+    if (!hasAny) {
+      updateExperimental({
+        weightedEntries: categories.map((category) => ({ category, weight: 1 })),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experimental.prefillMode, categoriesKey]);
 
   return (
     <form
