@@ -27,6 +27,11 @@ const SELECTION_MODES = [
 
 const PREFILL_MODES = [
   {
+    value: "weighted" as const,
+    label: "Weighted",
+    desc: "Each cell is filled independently from category weights.",
+  },
+  {
     value: "fixed" as const,
     label: "Fixed",
     desc: "Every respondent sees the same painted layout.",
@@ -35,11 +40,6 @@ const PREFILL_MODES = [
     value: "shuffle" as const,
     label: "Shuffle",
     desc: "Your painted assignments are shuffled per respondent.",
-  },
-  {
-    value: "weighted" as const,
-    label: "Weighted",
-    desc: "Each cell is filled independently from category weights.",
   },
 ] as const;
 
