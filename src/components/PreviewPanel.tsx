@@ -347,6 +347,23 @@ export const PreviewPanel: React.FC = () => {
     setWeightedPreview(computeWeightedSample(experimental.weightedEntries, cells));
   };
 
+  // Empty every cell in the currently editable layer of the preview.
+  const handleClearCells = () => {
+    if (!expEnabled) {
+      setAssignments({});
+      return;
+    }
+    if (experimentalTab === "respondent") {
+      setResponses({});
+      return;
+    }
+    if (experimental.prefillMode === "weighted") {
+      setWeightedPreview({});
+    } else {
+      dispatch({ type: "updateExperimental", patch: { fixedAssignments: {} } });
+    }
+  };
+
   const qualtricsSnippet = useMemo(() => buildQualtricsSnippet(config), [config]);
   const qualtricsQsf = useMemo(
     () => buildQualtricsQsfForConfig(config),
@@ -538,33 +555,6 @@ export const PreviewPanel: React.FC = () => {
                   </button>
                 );
               })}
-              {expEnabled && experimentalTab === "respondent" ? (
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={() => setDraggedResponseLabel("__CLEAR_RESP__")}
-                  onDragEnd={() => {
-                    setDraggedResponseLabel(null);
-                    setDragOverCell(null);
-                  }}
-                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
-                >
-                  Clear response
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={() => setDraggedCategory("__CLEAR__")}
-                  onDragEnd={() => {
-                    setDraggedCategory(null);
-                    setDragOverCell(null);
-                  }}
-                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600"
-                >
-                  Clear cell
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -574,6 +564,20 @@ export const PreviewPanel: React.FC = () => {
           <p className="text-xs text-slate-500">
             Each cell gets its own dropdown so respondents have to make a deliberate choice.
           </p>
+        )}
+
+        {/* Clear all — available for every input method */}
+        {(showPaintToolbar || showDragDropToolbar || showDropdownHint) && (
+          <div>
+            <button
+              type="button"
+              onClick={handleClearCells}
+              title="Empty all cells"
+              className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:border-slate-400 hover:text-slate-800"
+            >
+              Clear Cells
+            </button>
+          </div>
         )}
 
         {/* Experimental respondent hint */}
