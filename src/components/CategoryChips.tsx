@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { LayerMode } from "../grid-types";
+import ImageInput from "./ImageInput";
 
 const SWATCH_PALETTE = [
   "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -138,15 +139,12 @@ export const CategoryChips: React.FC<Props> = ({
             </label>
             <label className="flex min-w-[180px] flex-1 flex-col gap-1.5">
               <span className="text-[10px] font-bold tracking-widest text-ink-faint">
-                IMAGE URL{" "}
+                IMAGE{" "}
                 <span className="font-medium text-[#c2b59c]">optional</span>
               </span>
-              <input
-                type="url"
+              <ImageInput
                 value={open.imageUrl ?? ""}
-                onChange={(e) => update(openIndex, { imageUrl: e.target.value })}
-                placeholder="https://example.com/icon.png"
-                className="rounded-lg border border-hairline bg-white px-3 py-2.5 text-sm text-ink focus:border-accent focus:outline-none"
+                onChange={(v) => update(openIndex, { imageUrl: v })}
               />
             </label>
           </div>

@@ -753,7 +753,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	wrapper.style.position = "relative";
 
 	if (cfg.layout.backgroundImageUrl) {
-		wrapper.style.backgroundImage = "url(" + cfg.layout.backgroundImageUrl + ")";
+		wrapper.style.backgroundImage = "url('" + cfg.layout.backgroundImageUrl + "')";
 		wrapper.style.backgroundRepeat = "no-repeat";
 		wrapper.style.backgroundPosition = "center";
 		wrapper.style.backgroundSize = "contain";
@@ -1653,7 +1653,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		wrapper.style.position = "relative";
 
 		if (cfg.layout.backgroundImageUrl) {
-			wrapper.style.backgroundImage = "url(" + cfg.layout.backgroundImageUrl + ")";
+			wrapper.style.backgroundImage = "url('" + cfg.layout.backgroundImageUrl + "')";
 			wrapper.style.backgroundRepeat = "no-repeat";
 			wrapper.style.backgroundPosition = "center";
 			wrapper.style.backgroundSize = "contain";

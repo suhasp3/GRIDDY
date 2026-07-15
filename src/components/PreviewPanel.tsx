@@ -595,7 +595,7 @@ export const PreviewPanel: React.FC = () => {
             width: "100%",
             aspectRatio: `${tuning.previewWidth} / ${tuning.previewHeight}`,
             backgroundImage: layout.backgroundImageUrl
-              ? `url(${layout.backgroundImageUrl})`
+              ? `url('${layout.backgroundImageUrl}')`
               : undefined,
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center",

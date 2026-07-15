@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useEditor } from "../EditorContext";
 import { CategoryMeta, ExperimentalConfig } from "../grid-types";
 import CategoryChips, { ChipItem } from "./CategoryChips";
+import ImageInput from "./ImageInput";
 
 // ---------------------------------------------------------------------------
 // Selection-mode card data
@@ -299,14 +300,12 @@ const QuestionGridForm: React.FC = () => {
 
       <label className="flex flex-col gap-1">
         <span className="text-[10px] font-bold tracking-widest text-ink-faint">
-          BACKGROUND IMAGE URL
+          BACKGROUND IMAGE
         </span>
-        <input
-          type="url"
-          className={inputCls}
-          placeholder="https://example.com/map.png"
+        <ImageInput
           value={layout.backgroundImageUrl}
-          onChange={(e) => update({ backgroundImageUrl: e.target.value })}
+          placeholder="https://example.com/map.png"
+          onChange={(v) => update({ backgroundImageUrl: v })}
         />
       </label>
     </div>
