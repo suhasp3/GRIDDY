@@ -632,7 +632,6 @@ export const PreviewPanel: React.FC = () => {
                   : null;
                 const respColor = respMeta?.color ?? "#8b5cf6";
                 const respImage = respMeta?.imageUrl ?? "";
-                const respLayerMode: LayerMode = respMeta?.layerMode ?? "replace";
                 const hasResponse = Boolean(selectedResponse);
                 const isRespDropTarget =
                   survey.selectionMode === "dragdrop" && dragOverCell === cell.key;
@@ -761,8 +760,8 @@ export const PreviewPanel: React.FC = () => {
                         </select>
                       </div>
                     )}
-                    {/* Paint / drag-drop mode — response overlay (front mode) */}
-                    {survey.selectionMode !== "dropdown" && hasResponse && respImage && respLayerMode === "front" && (
+                    {/* Paint / drag-drop mode — response image layered on top */}
+                    {survey.selectionMode !== "dropdown" && hasResponse && respImage && (
                       <>
                         <img
                           src={respImage}
@@ -772,14 +771,19 @@ export const PreviewPanel: React.FC = () => {
                         />
                         <span
                           className="absolute bottom-0 left-0 right-0 truncate px-0.5 pb-0.5 text-center text-[8px] font-semibold leading-tight"
-                          style={{ backgroundColor: hexToRgba(respColor, 0.85), color: respColor, zIndex: 11 }}
+                          style={{
+                            backgroundColor: hexToRgba(respColor, 0.15),
+                            borderTop: `1px solid ${hexToRgba(respColor, 0.4)}`,
+                            color: respColor,
+                            zIndex: 11,
+                          }}
                         >
                           {selectedResponse}
                         </span>
                       </>
                     )}
-                    {/* Paint / drag-drop mode — response band (replace / behind) */}
-                    {survey.selectionMode !== "dropdown" && hasResponse && !(respImage && respLayerMode === "front") && (
+                    {/* Paint / drag-drop mode — response band (no image) */}
+                    {survey.selectionMode !== "dropdown" && hasResponse && !respImage && (
                       <div
                         className="flex flex-shrink-0 flex-col items-center overflow-hidden px-0.5 pb-0.5"
                         style={{

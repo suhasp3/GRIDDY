@@ -12,6 +12,8 @@ interface Props {
   placeholder?: string;
   /** Warn when a single embedded image exceeds this many bytes. Default 500KB. */
   warnBytes?: number;
+  /** Small helper note shown under the field (e.g. "use a transparent PNG"). */
+  hint?: string;
 }
 
 const DEFAULT_WARN_BYTES = 500 * 1024;
@@ -26,6 +28,7 @@ export const ImageInput: React.FC<Props> = ({
   onChange,
   placeholder = "https://example.com/icon.png",
   warnBytes = DEFAULT_WARN_BYTES,
+  hint,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -106,6 +109,8 @@ export const ImageInput: React.FC<Props> = ({
           />
         </div>
       </div>
+
+      {hint && <p className="text-xs text-ink-faint">{hint}</p>}
 
       {error && <p className="text-xs font-semibold text-accent">{error}</p>}
 

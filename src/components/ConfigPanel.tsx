@@ -700,6 +700,7 @@ export const ConfigPanel: React.FC = () => {
             editorTitle="EDITING LABEL"
             showLayerMode
             showClearAll
+            imageHint="Ideally a transparent PNG (no background) so it layers cleanly on top of the cell's image."
           />
         </div>
       </div>

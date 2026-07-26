@@ -264,39 +264,68 @@ Qualtrics.SurveyEngine.addOnReady(function()
 				var respMeta = getResponseMeta(placed);
 				var respColor = respMeta.color || "#8b5cf6";
 				var respImage = respMeta.imageUrl || "";
-				var band = document.createElement("div");
-				band.style.flexShrink = "0";
-				band.style.display = "flex";
-				band.style.flexDirection = "column";
-				band.style.alignItems = "center";
-				band.style.overflow = "hidden";
-				band.style.padding = "0 2px 2px";
-				band.style.backgroundColor = hexToRgba(respColor, 0.15);
-				band.style.borderTop = "1px solid " + hexToRgba(respColor, 0.4);
-				if (respImage) {
-					var rImg = document.createElement("img");
-					rImg.src = respImage;
-					rImg.alt = placed;
-					rImg.style.marginTop = "2px";
-					rImg.style.maxHeight = "16px";
-					rImg.style.maxWidth = "100%";
-					rImg.style.objectFit = "contain";
-					band.appendChild(rImg);
-				}
-				var rText = document.createElement("div");
-				rText.textContent = placed;
-				rText.style.width = "100%";
-				rText.style.textAlign = "center";
-				rText.style.fontSize = "8px";
-				rText.style.fontWeight = "600";
-				rText.style.lineHeight = "1.2";
-				rText.style.whiteSpace = "nowrap";
-				rText.style.overflow = "hidden";
-				rText.style.textOverflow = "ellipsis";
-				rText.style.color = respColor;
-				band.appendChild(rText);
 				cellRef.style.borderColor = respColor;
-				cellRef.appendChild(band);
+				if (respImage) {
+					// Reaction has an image: layer it full-cell on top of the
+					// pre-filled stimulus (transparent PNGs let the stimulus show
+					// through), with a small text label strip at the bottom.
+					cellRef.style.position = "relative";
+					var overlay = document.createElement("img");
+					overlay.src = respImage;
+					overlay.alt = placed;
+					overlay.style.position = "absolute";
+					overlay.style.top = "0";
+					overlay.style.left = "0";
+					overlay.style.width = "100%";
+					overlay.style.height = "100%";
+					overlay.style.objectFit = "contain";
+					overlay.style.zIndex = "10";
+					cellRef.appendChild(overlay);
+
+					var oLabel = document.createElement("div");
+					oLabel.textContent = placed;
+					oLabel.style.position = "absolute";
+					oLabel.style.bottom = "0";
+					oLabel.style.left = "0";
+					oLabel.style.right = "0";
+					oLabel.style.textAlign = "center";
+					oLabel.style.fontSize = "8px";
+					oLabel.style.fontWeight = "600";
+					oLabel.style.lineHeight = "1.2";
+					oLabel.style.whiteSpace = "nowrap";
+					oLabel.style.overflow = "hidden";
+					oLabel.style.textOverflow = "ellipsis";
+					oLabel.style.padding = "0 2px 1px";
+					oLabel.style.color = respColor;
+					oLabel.style.backgroundColor = hexToRgba(respColor, 0.15);
+					oLabel.style.borderTop = "1px solid " + hexToRgba(respColor, 0.4);
+					oLabel.style.zIndex = "11";
+					cellRef.appendChild(oLabel);
+				} else {
+					// No image: colored text band at the bottom.
+					var band = document.createElement("div");
+					band.style.flexShrink = "0";
+					band.style.display = "flex";
+					band.style.flexDirection = "column";
+					band.style.alignItems = "center";
+					band.style.overflow = "hidden";
+					band.style.padding = "0 2px 2px";
+					band.style.backgroundColor = hexToRgba(respColor, 0.15);
+					band.style.borderTop = "1px solid " + hexToRgba(respColor, 0.4);
+					var rText = document.createElement("div");
+					rText.textContent = placed;
+					rText.style.width = "100%";
+					rText.style.textAlign = "center";
+					rText.style.fontSize = "8px";
+					rText.style.fontWeight = "600";
+					rText.style.lineHeight = "1.2";
+					rText.style.whiteSpace = "nowrap";
+					rText.style.overflow = "hidden";
+					rText.style.textOverflow = "ellipsis";
+					rText.style.color = respColor;
+					band.appendChild(rText);
+					cellRef.appendChild(band);
+				}
 			}
 			return;
 		}

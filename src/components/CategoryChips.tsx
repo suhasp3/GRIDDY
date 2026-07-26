@@ -22,6 +22,8 @@ interface Props {
   editorTitle?: string;
   showLayerMode?: boolean;
   showClearAll?: boolean;
+  /** Small helper note shown under the image field. */
+  imageHint?: string;
 }
 
 export const CategoryChips: React.FC<Props> = ({
@@ -31,6 +33,7 @@ export const CategoryChips: React.FC<Props> = ({
   editorTitle = "EDITING",
   showLayerMode = false,
   showClearAll = false,
+  imageHint,
 }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -145,6 +148,7 @@ export const CategoryChips: React.FC<Props> = ({
               <ImageInput
                 value={open.imageUrl ?? ""}
                 onChange={(v) => update(openIndex, { imageUrl: v })}
+                hint={imageHint}
               />
             </label>
           </div>
