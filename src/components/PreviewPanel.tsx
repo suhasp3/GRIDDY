@@ -19,6 +19,7 @@ function renderAssignedContent(
   imageUrl: string,
   color: string,
   layerMode: LayerMode = "replace",
+  textPosition: "top" | "bottom" = "bottom",
 ) {
   if (imageUrl && layerMode === "front") {
     return (
@@ -29,7 +30,9 @@ function renderAssignedContent(
           className="absolute inset-0 h-full w-full object-contain"
         />
         <span
-          className="absolute bottom-0 left-0 right-0 truncate px-0.5 pb-0.5 text-center text-[8px] font-medium leading-tight"
+          className={`absolute left-0 right-0 truncate px-0.5 text-center text-[8px] font-medium leading-tight ${
+            textPosition === "top" ? "top-0 pt-0.5" : "bottom-0 pb-0.5"
+          }`}
           style={{ backgroundColor: hexToRgba(color, 0.75), color: "#0f172a" }}
         >
           {category}
@@ -55,6 +58,11 @@ function renderAssignedContent(
 
   return (
     <>
+      {imageUrl && textPosition === "top" && (
+        <div className="w-full flex-shrink-0 truncate px-0.5 pt-0.5 text-center text-[9px] leading-tight">
+          {category}
+        </div>
+      )}
       {imageUrl && (
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-0.5">
           <img
@@ -64,15 +72,17 @@ function renderAssignedContent(
           />
         </div>
       )}
-      <div
-        className={`w-full flex-shrink-0 text-center leading-tight ${
-          imageUrl
-            ? "truncate px-0.5 pb-0.5 text-[9px]"
-            : "flex flex-1 items-center justify-center p-1 text-[10px]"
-        }`}
-      >
-        {category}
-      </div>
+      {(!imageUrl || textPosition === "bottom") && (
+        <div
+          className={`w-full flex-shrink-0 text-center leading-tight ${
+            imageUrl
+              ? "truncate px-0.5 pb-0.5 text-[9px]"
+              : "flex flex-1 items-center justify-center p-1 text-[10px]"
+          }`}
+        >
+          {category}
+        </div>
+      )}
     </>
   );
 }
@@ -733,7 +743,13 @@ export const PreviewPanel: React.FC = () => {
                       }
                     >
                       {assignedCat ? (
-                        renderAssignedContent(assignedCat, catImage, catColor, catLayerMode)
+                        renderAssignedContent(
+                          assignedCat,
+                          catImage,
+                          catColor,
+                          catLayerMode,
+                          "top",
+                        )
                       ) : (
                         <div className="flex flex-1 items-center justify-center text-[9px] text-slate-400">
                           —
@@ -906,7 +922,13 @@ export const PreviewPanel: React.FC = () => {
                   </span>
 
                   {assignedCat ? (
-                    renderAssignedContent(assignedCat, catImage, catColor, catLayerMode)
+                    renderAssignedContent(
+                      assignedCat,
+                      catImage,
+                      catColor,
+                      catLayerMode,
+                      expEnabled ? "top" : "bottom",
+                    )
                   ) : !expEnabled && survey.allowInteraction &&
                     survey.selectionMode === "dropdown" &&
                     !cell.isCenter ? (

@@ -224,7 +224,9 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			textWrap.style.lineHeight = "1.2";
 			textWrap.style.flexShrink = catImage ? "0" : "0";
 			if (catImage) {
-				textWrap.style.padding = "0 2px 2px";
+				// With an image, the label sits at the top of the cell so a
+				// reaction's bottom label never collides with it.
+				textWrap.style.padding = "2px 2px 0";
 				textWrap.style.fontSize = "9px";
 				textWrap.style.whiteSpace = "nowrap";
 				textWrap.style.overflow = "hidden";
@@ -238,7 +240,11 @@ Qualtrics.SurveyEngine.addOnReady(function()
 				textWrap.style.fontSize = "10px";
 			}
 			textWrap.textContent = catName;
-			topDiv.appendChild(textWrap);
+			if (catImage) {
+				topDiv.insertBefore(textWrap, topDiv.firstChild);
+			} else {
+				topDiv.appendChild(textWrap);
+			}
 		} else {
 			var emptyDiv = document.createElement("div");
 			emptyDiv.style.flex = "1";
