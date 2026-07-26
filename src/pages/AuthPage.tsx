@@ -46,10 +46,25 @@ export default function AuthPage() {
     }
   };
 
+  const inputClass =
+    "rounded-lg border border-hairline bg-paper-window px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-center text-xl font-semibold text-slate-900">
+    <div
+      className="flex min-h-screen items-center justify-center bg-paper px-4 font-sans"
+      style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
+    >
+      <div className="w-full max-w-sm rounded-2xl border border-hairline-warm bg-paper-card p-8 shadow-sm">
+        <div className="mb-6 flex items-center justify-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[7px] bg-accent font-serif text-base font-bold text-white">
+            G
+          </div>
+          <span className="font-serif text-[19px] font-bold tracking-tight text-ink">
+            GRIDDY
+          </span>
+        </div>
+
+        <h1 className="mb-6 text-center font-serif text-xl font-bold text-ink">
           {mode === "signin" ? "Sign in to Griddy" : "Create an account"}
         </h1>
 
@@ -57,27 +72,31 @@ export default function AuthPage() {
           {mode === "signup" && (
             <>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700">First Name</label>
+                <label className="text-[11px] font-bold tracking-widest text-ink-faint">
+                  FIRST NAME
+                </label>
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   required={mode === "signup"}
                   autoComplete="given-name"
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  className={inputClass}
                   placeholder="Jane"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700">Last Name</label>
+                <label className="text-[11px] font-bold tracking-widest text-ink-faint">
+                  LAST NAME
+                </label>
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required={mode === "signup"}
                   autoComplete="family-name"
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  className={inputClass}
                   placeholder="Doe"
                 />
               </div>
@@ -85,42 +104,46 @@ export default function AuthPage() {
           )}
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700">Email</label>
+            <label className="text-[11px] font-bold tracking-widest text-ink-faint">
+              EMAIL
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+              className={inputClass}
               placeholder="you@example.com"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700">Password</label>
+            <label className="text-[11px] font-bold tracking-widest text-ink-faint">
+              PASSWORD
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+              className={inputClass}
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+            <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">{error}</p>
           )}
           {message && (
-            <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p>
+            <p className="rounded-lg bg-paper-window px-3 py-2 text-sm text-ink">{message}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 rounded-lg bg-slate-900 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="mt-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
           >
             {loading ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
           </button>
@@ -128,23 +151,23 @@ export default function AuthPage() {
 
         <div className="mt-5 text-center">
           {mode === "signin" ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-muted">
               Don&apos;t have an account?{" "}
               <button
                 type="button"
                 onClick={() => { setMode("signup"); setError(null); setMessage(null); }}
-                className="font-medium text-slate-800 hover:underline"
+                className="font-semibold text-accent hover:underline"
               >
                 Sign up
               </button>
             </p>
           ) : (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-muted">
               Already have an account?{" "}
               <button
                 type="button"
                 onClick={() => { setMode("signin"); setError(null); setMessage(null); }}
-                className="font-medium text-slate-800 hover:underline"
+                className="font-semibold text-accent hover:underline"
               >
                 Sign in
               </button>
@@ -156,7 +179,7 @@ export default function AuthPage() {
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="text-sm text-slate-400 hover:text-slate-600"
+            className="text-sm text-ink-faint hover:text-ink-muted"
           >
             ← Back to editor
           </button>

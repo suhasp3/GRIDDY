@@ -14,11 +14,11 @@ export default function ErrorPage() {
   return (
     <FlexContainer
       variant="column-center"
-      className="h-screen w-full bg-white p-5"
+      className="h-screen w-full bg-paper p-5 font-sans"
     >
-      <h1 className="text-3xl font-bold">Oops!</h1>
-      <p className="text-lg">Sorry, an unexpected error has occurred.</p>
-      <p className="text-lg">
+      <h1 className="font-serif text-3xl font-bold text-ink">Oops!</h1>
+      <p className="text-lg text-ink-muted">Sorry, an unexpected error has occurred.</p>
+      <p className="text-lg text-ink-faint">
         <i>{statusText || message}</i>
       </p>
     </FlexContainer>

@@ -32,16 +32,19 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
-          <p className="text-center text-slate-600">
+      <div
+        className="flex min-h-screen items-center justify-center bg-paper px-4 font-sans"
+        style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
+      >
+        <div className="w-full max-w-md rounded-2xl border border-hairline-warm bg-paper-card p-8 shadow-sm">
+          <p className="text-center text-ink-muted">
             You are not signed in. Local survey saving is still available in this browser.
           </p>
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Local Surveys
+          <div className="mt-6 rounded-xl border border-hairline bg-paper-window p-4">
+            <p className="text-[11px] font-bold tracking-widest text-ink-faint">
+              LOCAL SURVEYS
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
+            <p className="mt-2 text-2xl font-bold text-ink">
               {fetchingCount ? "..." : questionCount}
             </p>
           </div>
@@ -49,7 +52,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => navigate("/auth")}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
             >
               Go to Sign In
             </button>
@@ -60,55 +63,58 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8">
-      <div className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-6 shadow-sm">
+    <div
+      className="min-h-screen bg-paper px-6 py-8 font-sans"
+      style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
+    >
+      <div className="mx-auto w-full max-w-2xl rounded-2xl border border-hairline-warm bg-paper-card p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-900">My Profile</h1>
+          <h1 className="font-serif text-xl font-bold text-ink">My Profile</h1>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="text-sm text-slate-600 hover:text-slate-900"
+            className="text-sm font-semibold text-ink-muted hover:text-ink"
           >
             ← Back to editor
           </button>
         </div>
 
-        {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="mb-4 rounded-lg bg-accent-soft p-3 text-sm text-accent">{error}</p>}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">First Name</p>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900">
+            <p className="mb-1 text-[11px] font-bold tracking-widest text-ink-faint">FIRST NAME</p>
+            <div className="rounded-lg border border-hairline bg-paper-window px-3 py-2 text-sm text-ink">
               {firstName || "Not set"}
             </div>
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Last Name</p>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900">
+            <p className="mb-1 text-[11px] font-bold tracking-widest text-ink-faint">LAST NAME</p>
+            <div className="rounded-lg border border-hairline bg-paper-window px-3 py-2 text-sm text-ink">
               {lastName || "Not set"}
             </div>
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Email</p>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900">
+            <p className="mb-1 text-[11px] font-bold tracking-widest text-ink-faint">EMAIL</p>
+            <div className="rounded-lg border border-hairline bg-paper-window px-3 py-2 text-sm text-ink">
               {user.email || "Not set"}
             </div>
           </div>
 
         </div>
 
-        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Stats</p>
+        <div className="mt-6 rounded-xl border border-hairline bg-paper-window p-4">
+          <p className="text-[11px] font-bold tracking-widest text-ink-faint">STATS</p>
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-700">User</p>
-              <p className="text-base font-medium text-slate-900">{fullName}</p>
+              <p className="text-sm text-ink-muted">User</p>
+              <p className="text-base font-semibold text-ink">{fullName}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-slate-700">Active Survey Questions</p>
-              <p className="text-2xl font-semibold text-slate-900">
+              <p className="text-sm text-ink-muted">Active Survey Questions</p>
+              <p className="text-2xl font-bold text-ink">
                 {fetchingCount ? "..." : questionCount}
               </p>
             </div>

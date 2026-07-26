@@ -274,10 +274,13 @@ export default function HistoryPage() {
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8">
+    <div
+      className="min-h-screen bg-paper px-6 py-8 font-sans"
+      style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
+    >
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-900">My Surveys</h1>
+          <h1 className="font-serif text-xl font-bold text-ink">My Surveys</h1>
           <div className="flex items-center gap-2">
             <input
               ref={fileInputRef}
@@ -290,7 +293,7 @@ export default function HistoryPage() {
               type="button"
               onClick={handleExport}
               disabled={transferring}
-              className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+              className="rounded-md bg-paper-window px-3 py-1.5 text-sm font-semibold text-ink-muted hover:bg-hairline-warm disabled:opacity-50"
             >
               Export JSON
             </button>
@@ -298,7 +301,7 @@ export default function HistoryPage() {
               type="button"
               onClick={handleExportQualtrics}
               disabled={transferring || selectedSurveyIds.length === 0}
-              className="rounded-md bg-sky-100 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-200 disabled:opacity-50"
+              className="rounded-md bg-accent-tint px-3 py-1.5 text-sm font-semibold text-accent hover:opacity-90 disabled:opacity-50"
             >
               Export Qualtrics (.qsf)
             </button>
@@ -306,14 +309,14 @@ export default function HistoryPage() {
               type="button"
               onClick={handleImportClick}
               disabled={transferring}
-              className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+              className="rounded-md bg-paper-window px-3 py-1.5 text-sm font-semibold text-ink-muted hover:bg-hairline-warm disabled:opacity-50"
             >
               Import JSON
             </button>
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="text-sm text-slate-600 hover:text-slate-900"
+              className="text-sm font-semibold text-ink-muted hover:text-ink"
             >
               Back to editor
             </button>
@@ -321,14 +324,14 @@ export default function HistoryPage() {
         </div>
 
         {error && (
-          <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+          <p className="mb-4 rounded-lg bg-accent-soft p-3 text-sm text-accent">{error}</p>
         )}
 
         {notice && (
-          <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>
+          <p className="mb-4 rounded-lg bg-paper-window p-3 text-sm text-ink">{notice}</p>
         )}
 
-        <p className="mb-4 text-sm text-slate-500">
+        <p className="mb-4 text-sm text-ink-muted">
           {user
             ? "Signed in: showing surveys from your account."
             : "Not signed in: showing surveys saved in this browser only."}
@@ -339,7 +342,7 @@ export default function HistoryPage() {
             type="button"
             onClick={selectAllSurveys}
             disabled={surveys.length === 0}
-            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-md border border-hairline bg-paper-card px-3 py-1.5 font-semibold text-ink-muted hover:bg-paper-window disabled:opacity-50"
           >
             Select all
           </button>
@@ -347,38 +350,38 @@ export default function HistoryPage() {
             type="button"
             onClick={clearSelection}
             disabled={selectedSurveyIds.length === 0}
-            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-md border border-hairline bg-paper-card px-3 py-1.5 font-semibold text-ink-muted hover:bg-paper-window disabled:opacity-50"
           >
             Clear selection
           </button>
-          <span className="text-slate-500">
+          <span className="text-ink-faint">
             {selectedSurveyIds.length} selected for Qualtrics export
           </span>
         </div>
 
-        {fetching && <p className="text-sm text-slate-500">Loading...</p>}
+        {fetching && <p className="text-sm text-ink-muted">Loading...</p>}
 
         {!fetching && surveys.length === 0 && (
-          <p className="text-sm text-slate-500">No saved surveys yet.</p>
+          <p className="text-sm text-ink-muted">No saved surveys yet.</p>
         )}
 
         <ul className="space-y-3">
           {surveys.map((s) => (
             <li
               key={s.id}
-              className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+              className="flex items-center justify-between rounded-xl border border-hairline-warm bg-paper-card p-4 shadow-sm"
             >
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   checked={selectedSurveyIds.includes(s.id)}
                   onChange={() => toggleSurveySelection(s.id)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300"
+                  className="mt-1 h-4 w-4 rounded border-hairline"
                   aria-label={`Select ${s.name}`}
                 />
                 <div>
-                  <p className="font-medium text-slate-900">{s.name}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="font-semibold text-ink">{s.name}</p>
+                  <p className="text-xs text-ink-faint mt-0.5">
                     Created {new Date(s.created_at).toLocaleDateString()} &middot; Last edited{" "}
                     {new Date(s.updated_at).toLocaleDateString()}
                   </p>
@@ -388,14 +391,14 @@ export default function HistoryPage() {
                 <button
                   type="button"
                   onClick={() => handleOpen(s.id)}
-                  className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                  className="rounded-md bg-paper-window px-3 py-1.5 text-sm font-semibold text-ink-muted hover:bg-hairline-warm"
                 >
                   Open
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(s.id)}
-                  className="rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
+                  className="rounded-md bg-accent-soft px-3 py-1.5 text-sm font-semibold text-accent hover:opacity-90"
                 >
                   Delete
                 </button>
