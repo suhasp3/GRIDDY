@@ -69,6 +69,7 @@ interface SummaryRowProps {
   expanded: boolean;
   onEdit: () => void;
   children: React.ReactNode;
+  "data-tour"?: string;
 }
 
 const SummaryRow: React.FC<SummaryRowProps> = ({
@@ -78,8 +79,9 @@ const SummaryRow: React.FC<SummaryRowProps> = ({
   expanded,
   onEdit,
   children,
+  "data-tour": dataTour,
 }) => (
-  <div className="rounded-xl border border-hairline-warm bg-paper-card">
+  <div data-tour={dataTour} className="rounded-xl border border-hairline-warm bg-paper-card">
     <div className="flex items-center gap-3.5 px-4 py-3">
       <span className="font-serif text-lg font-semibold leading-none text-[#c2b59c]">
         {num}
@@ -449,7 +451,7 @@ export const ConfigPanel: React.FC = () => {
     return (
       <div className="flex flex-col gap-5">
         {/* 01 — Question & Grid */}
-        <section>
+        <section data-tour="section-question-grid">
           <div className="mb-3 flex items-baseline gap-3">
             <Num n="01" dim />
             <span className="font-serif text-[17px] font-semibold text-ink">
@@ -460,7 +462,7 @@ export const ConfigPanel: React.FC = () => {
         </section>
 
         {/* 02 — Categories */}
-        <section>
+        <section data-tour="section-categories">
           <div className="mb-3 flex items-baseline gap-3">
             <Num n="02" dim />
             <span className="font-serif text-[17px] font-semibold text-ink">
@@ -478,7 +480,7 @@ export const ConfigPanel: React.FC = () => {
         </section>
 
         {/* 03 — How respondents answer */}
-        <section>
+        <section data-tour="section-selection-mode">
           <div className="mb-3 flex items-baseline gap-3">
             <Num n="03" dim />
             <span className="font-serif text-[17px] font-semibold text-ink">
@@ -503,6 +505,7 @@ export const ConfigPanel: React.FC = () => {
         {/* 04 — Add experiment opt-in */}
         <button
           type="button"
+          data-tour="section-experiment"
           onClick={() => updateExperimental({ enabled: true })}
           className="flex items-center gap-4 rounded-xl border border-dashed border-[#e6cfc3] bg-paper-card px-5 py-4 text-left transition-colors hover:border-accent/60 hover:bg-accent-soft/40"
         >
@@ -546,6 +549,7 @@ export const ConfigPanel: React.FC = () => {
         summary={questionSummary}
         expanded={editSection === 1}
         onEdit={() => setEditSection(editSection === 1 ? null : 1)}
+        data-tour="section-question-grid"
       >
         <QuestionGridForm />
       </SummaryRow>
@@ -557,6 +561,7 @@ export const ConfigPanel: React.FC = () => {
         summary={categorySummary}
         expanded={editSection === 2}
         onEdit={() => setEditSection(editSection === 2 ? null : 2)}
+        data-tour="section-categories"
       >
         <CategoryChips
           items={categoryItems}
@@ -575,6 +580,7 @@ export const ConfigPanel: React.FC = () => {
         summary={selModeSummary}
         expanded={editSection === 3}
         onEdit={() => setEditSection(editSection === 3 ? null : 3)}
+        data-tour="section-selection-mode"
       >
         <div className="flex gap-3">
           {SELECTION_MODES.map((m) => (
@@ -607,7 +613,7 @@ export const ConfigPanel: React.FC = () => {
       </div>
 
       {/* 04 — Experiment config */}
-      <div className="rounded-xl border border-[#e6cfc3] bg-paper-card p-5">
+      <div data-tour="section-experiment" className="rounded-xl border border-[#e6cfc3] bg-paper-card p-5">
         <div className="mb-5 flex items-baseline gap-4">
           <Num n="04" />
           <div>

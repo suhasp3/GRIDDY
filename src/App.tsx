@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ConfigPanel from "./components/ConfigPanel";
 import PreviewPanel from "./components/PreviewPanel";
 import SaveButton from "./components/SaveButton";
+import TourGuide from "./components/TourGuide";
 import { useAuth } from "./lib/authContext";
 import { useEditor } from "./EditorContext";
 
@@ -9,6 +11,8 @@ function App() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { state, dispatch } = useEditor();
+  const [tourRunning, setTourRunning] = useState(false);
+  const onStartTour = () => setTourRunning(true);
 
   const expEnabled = state.config.experimental?.enabled ?? false;
 
@@ -19,6 +23,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-paper font-sans" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
+      <TourGuide run={tourRunning} onFinish={() => setTourRunning(false)} />
       <div className="mx-auto flex w-full max-w-[1480px] flex-col" style={{ minHeight: "100vh" }}>
 
         {/* ── Top bar ── */}
@@ -40,7 +45,10 @@ function App() {
 
           {/* Study name (centre) */}
           <div className="flex flex-1 justify-center">
-            <div className="flex w-full max-w-[480px] items-center gap-2.5 rounded-lg border border-hairline bg-paper-window px-4 py-2.5">
+            <div
+              data-tour="study-name"
+              className="flex w-full max-w-[480px] items-center gap-2.5 rounded-lg border border-hairline bg-paper-window px-4 py-2.5"
+            >
               <span className="text-[11px] font-bold tracking-widest text-ink-faint">
                 STUDY
               </span>
@@ -74,6 +82,13 @@ function App() {
             >
               My surveys
             </Link>
+            <button
+              type="button"
+              onClick={onStartTour}
+              className="text-[13.5px] font-semibold text-ink-muted hover:text-ink"
+            >
+              Take a tour
+            </button>
             {user ? (
               <button
                 type="button"
@@ -113,7 +128,7 @@ function App() {
           </div>
 
           {/* Sticky preview */}
-          <div className="w-[498px] flex-shrink-0">
+          <div data-tour="preview" className="w-[498px] flex-shrink-0">
             <PreviewPanel />
           </div>
         </main>

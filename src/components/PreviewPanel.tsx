@@ -989,6 +989,7 @@ export const PreviewPanel: React.FC = () => {
         <div className="flex items-center gap-2.5 border-t border-hairline-warm pt-4">
           <button
             type="button"
+            data-tour="export-button"
             onClick={() => setIsCodeModalOpen(true)}
             className="flex-1 rounded-xl bg-accent py-3 text-center text-[14.5px] font-bold text-white hover:bg-accent/90"
           >
