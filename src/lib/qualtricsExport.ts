@@ -56,6 +56,16 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	if (!container) return;
 
 	container.innerHTML = "";
+	container.style.fontFamily = "'Hanken Grotesk', sans-serif";
+	container.style.color = "#2a241c";
+
+	if (!document.getElementById("griddy-fonts")) {
+		var fontLink = document.createElement("link");
+		fontLink.id = "griddy-fonts";
+		fontLink.rel = "stylesheet";
+		fontLink.href = "https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap";
+		document.head.appendChild(fontLink);
+	}
 
 	var cfg = ${cfgJson};
 	var surveyCfg = cfg.survey || {};
@@ -196,8 +206,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		topDiv.style.display = "flex";
 		topDiv.style.flexDirection = "column";
 		topDiv.style.overflow = "hidden";
-		topDiv.style.backgroundColor = catColor ? hexToRgba(catColor, 0.2) : "#ffffff";
-		topDiv.style.borderBottom = catColor ? ("1px solid " + hexToRgba(catColor, 0.4)) : "1px solid #e2e8f0";
+		topDiv.style.backgroundColor = catColor ? hexToRgba(catColor, 0.2) : "#fbf8f1";
+		topDiv.style.borderBottom = catColor ? ("1px solid " + hexToRgba(catColor, 0.4)) : "1px solid #e2dccf";
 
 		if (catName) {
 			if (catImage) {
@@ -252,13 +262,13 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			emptyDiv.style.alignItems = "center";
 			emptyDiv.style.justifyContent = "center";
 			emptyDiv.style.fontSize = "9px";
-			emptyDiv.style.color = "#94a3b8";
+			emptyDiv.style.color = "#a0967f";
 			emptyDiv.textContent = "\u2014";
 			topDiv.appendChild(emptyDiv);
 		}
 
-		cellRef.style.backgroundColor = catColor ? hexToRgba(catColor, 0.2) : "#ffffff";
-		cellRef.style.borderColor = catColor || "#cbd5e1";
+		cellRef.style.backgroundColor = catColor ? hexToRgba(catColor, 0.2) : "#fbf8f1";
+		cellRef.style.borderColor = catColor || "#e2dccf";
 		cellRef.appendChild(topDiv);
 
 		// Bottom portion: how the respondent reacts depends on selectionMode.
@@ -341,12 +351,12 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			bottomDiv.style.padding = "2px";
 			var select = document.createElement("select");
 			select.style.width = "100%";
-			select.style.border = "1px solid #cbd5e1";
+			select.style.border = "1px solid #e2dccf";
 			select.style.borderRadius = "4px";
-			select.style.backgroundColor = "#ffffff";
+			select.style.backgroundColor = "#fbf8f1";
 			select.style.padding = "2px 4px";
 			select.style.fontSize = "9px";
-			select.style.color = "#0f172a";
+			select.style.color = "#2a241c";
 			select.style.outline = "none";
 
 			var emptyOpt = document.createElement("option");
@@ -384,9 +394,9 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		cellRef.style.alignItems = "stretch";
 		cellRef.style.justifyContent = "center";
 		cellRef.style.overflow = "hidden";
-		cellRef.style.backgroundColor = isCenterCell ? "#e0f2fe" : "#ffffff";
-		cellRef.style.borderColor = isCenterCell ? "#38bdf8" : "#cbd5e1";
-		cellRef.style.color = "#0f172a";
+		cellRef.style.backgroundColor = isCenterCell ? "#f7ece9" : "#fbf8f1";
+		cellRef.style.borderColor = isCenterCell ? "#8a2e3b" : "#e2dccf";
+		cellRef.style.color = "#2a241c";
 	}
 
 	function renderCellContent(cellRef, catName, catColor, catImage) {
@@ -459,12 +469,12 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		var select = document.createElement("select");
 		select.style.width = "100%";
 		select.style.minWidth = "0";
-		select.style.border = "1px solid #cbd5e1";
+		select.style.border = "1px solid #e2dccf";
 		select.style.borderRadius = "6px";
-		select.style.backgroundColor = "#ffffff";
+		select.style.backgroundColor = "#fbf8f1";
 		select.style.padding = "4px 6px";
 		select.style.fontSize = "10px";
-		select.style.color = "#0f172a";
+		select.style.color = "#2a241c";
 
 		var emptyOption = document.createElement("option");
 		emptyOption.value = "";
@@ -528,7 +538,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 
 	function createCategoryChip(catName, isClear) {
 		var meta = getCategoryMeta(catName);
-		var color = isClear ? "#94a3b8" : (meta.color || "#60a5fa");
+		var color = isClear ? "#a0967f" : (meta.color || "#60a5fa");
 		var chip = document.createElement("button");
 		chip.type = "button";
 		chip.textContent = catName;
@@ -536,12 +546,12 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		chip.style.alignItems = "center";
 		chip.style.justifyContent = "center";
 		chip.style.borderRadius = "9999px";
-		chip.style.border = "1px solid #e2e8f0";
+		chip.style.border = "1px solid #e2dccf";
 		chip.style.padding = "4px 10px";
 		chip.style.fontSize = "11px";
 		chip.style.fontWeight = "500";
-		chip.style.backgroundColor = isClear ? "#ffffff" : hexToRgba(color, 0.12);
-		chip.style.color = "#334155";
+		chip.style.backgroundColor = isClear ? "#fbf8f1" : hexToRgba(color, 0.12);
+		chip.style.color = "#2a241c";
 		chip.style.cursor = "grab";
 		chip.draggable = true;
 
@@ -562,7 +572,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 
 	function createResponseChip(lbl, isClear) {
 		var meta = isClear ? {} : getResponseMeta(lbl);
-		var color = isClear ? "#94a3b8" : (meta.color || "#8b5cf6");
+		var color = isClear ? "#a0967f" : (meta.color || "#8b5cf6");
 		var chip = document.createElement("button");
 		chip.type = "button";
 		chip.textContent = lbl;
@@ -570,12 +580,12 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		chip.style.alignItems = "center";
 		chip.style.justifyContent = "center";
 		chip.style.borderRadius = "9999px";
-		chip.style.border = "1px solid #e2e8f0";
+		chip.style.border = "1px solid #e2dccf";
 		chip.style.padding = "4px 10px";
 		chip.style.fontSize = "11px";
 		chip.style.fontWeight = "500";
-		chip.style.backgroundColor = isClear ? "#ffffff" : hexToRgba(color, 0.12);
-		chip.style.color = "#334155";
+		chip.style.backgroundColor = isClear ? "#fbf8f1" : hexToRgba(color, 0.12);
+		chip.style.color = "#2a241c";
 		chip.style.cursor = "grab";
 		chip.draggable = true;
 
@@ -597,6 +607,10 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	var questionText = document.createElement("p");
 	questionText.textContent = cfg.layout.questionText;
 	questionText.style.marginBottom = "8px";
+	questionText.style.fontFamily = "'Source Serif 4', serif";
+	questionText.style.fontSize = "17px";
+	questionText.style.fontWeight = "600";
+	questionText.style.color = "#2a241c";
 	container.appendChild(questionText);
 
 	if (!isExperimental && allowInteraction && categories.length > 0 && selectionMode === "paint") {
@@ -611,7 +625,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		toolbarLabel.textContent = "Placing:";
 		toolbarLabel.style.fontSize = "11px";
 		toolbarLabel.style.fontWeight = "600";
-		toolbarLabel.style.color = "#475569";
+		toolbarLabel.style.color = "#8a8170";
 		toolbar.appendChild(toolbarLabel);
 
 		categories.forEach(function (cat) {
@@ -624,11 +638,11 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			btn.style.alignItems = "center";
 			btn.style.gap = "4px";
 			btn.style.borderRadius = "9999px";
-			btn.style.border = cat === activeCategory ? "1px solid " + color : "1px solid #e2e8f0";
+			btn.style.border = cat === activeCategory ? "1px solid " + color : "1px solid #e2dccf";
 			btn.style.padding = "2px 8px";
 			btn.style.fontSize = "11px";
-			btn.style.backgroundColor = cat === activeCategory ? hexToRgba(color, 0.15) : "#ffffff";
-			btn.style.color = "#334155";
+			btn.style.backgroundColor = cat === activeCategory ? hexToRgba(color, 0.15) : "#fbf8f1";
+			btn.style.color = "#2a241c";
 			btn.style.cursor = "pointer";
 
 			var dot = document.createElement("span");
@@ -647,8 +661,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					var otherMeta = getCategoryMeta(other.dataset.cat);
 					var otherColor = otherMeta.color || "#60a5fa";
 					var isActive = other.dataset.cat === cat;
-					other.style.backgroundColor = isActive ? hexToRgba(otherColor, 0.15) : "#ffffff";
-					other.style.borderColor = isActive ? otherColor : "#e2e8f0";
+					other.style.backgroundColor = isActive ? hexToRgba(otherColor, 0.15) : "#fbf8f1";
+					other.style.borderColor = isActive ? otherColor : "#e2dccf";
 				});
 			};
 
@@ -669,7 +683,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		dragLabel.textContent = "Drag a label onto a cell:";
 		dragLabel.style.fontSize = "11px";
 		dragLabel.style.fontWeight = "600";
-		dragLabel.style.color = "#475569";
+		dragLabel.style.color = "#8a8170";
 		dragHelp.appendChild(dragLabel);
 
 		var dragTray = document.createElement("div");
@@ -698,7 +712,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		respToolbarLabel.textContent = "Reacting:";
 		respToolbarLabel.style.fontSize = "11px";
 		respToolbarLabel.style.fontWeight = "600";
-		respToolbarLabel.style.color = "#475569";
+		respToolbarLabel.style.color = "#8a8170";
 		respToolbar.appendChild(respToolbarLabel);
 
 		responseLabels.forEach(function (lbl) {
@@ -711,11 +725,11 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			btn.style.alignItems = "center";
 			btn.style.gap = "4px";
 			btn.style.borderRadius = "9999px";
-			btn.style.border = lbl === activeResponseLabel ? "1px solid " + color : "1px solid #e2e8f0";
+			btn.style.border = lbl === activeResponseLabel ? "1px solid " + color : "1px solid #e2dccf";
 			btn.style.padding = "2px 8px";
 			btn.style.fontSize = "11px";
-			btn.style.backgroundColor = lbl === activeResponseLabel ? hexToRgba(color, 0.15) : "#ffffff";
-			btn.style.color = "#334155";
+			btn.style.backgroundColor = lbl === activeResponseLabel ? hexToRgba(color, 0.15) : "#fbf8f1";
+			btn.style.color = "#2a241c";
 			btn.style.cursor = "pointer";
 
 			var dot = document.createElement("span");
@@ -734,8 +748,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					var otherMeta = getResponseMeta(other.dataset.resp);
 					var otherColor = otherMeta.color || "#8b5cf6";
 					var isActive = other.dataset.resp === lbl;
-					other.style.backgroundColor = isActive ? hexToRgba(otherColor, 0.15) : "#ffffff";
-					other.style.borderColor = isActive ? otherColor : "#e2e8f0";
+					other.style.backgroundColor = isActive ? hexToRgba(otherColor, 0.15) : "#fbf8f1";
+					other.style.borderColor = isActive ? otherColor : "#e2dccf";
 				});
 			};
 
@@ -756,7 +770,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		respDragLabel.textContent = "Drag a reaction onto a cell:";
 		respDragLabel.style.fontSize = "11px";
 		respDragLabel.style.fontWeight = "600";
-		respDragLabel.style.color = "#475569";
+		respDragLabel.style.color = "#8a8170";
 		respDragHelp.appendChild(respDragLabel);
 
 		var respDragTray = document.createElement("div");
@@ -781,8 +795,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	var wrapper = document.createElement("div");
 	wrapper.style.width = cfg.tuning.previewWidth + "px";
 	wrapper.style.height = cfg.tuning.previewHeight + "px";
-	wrapper.style.border = "1px solid #cbd5e1";
-	wrapper.style.backgroundColor = "#f8fafc";
+	wrapper.style.border = "1px solid #e2dccf";
+	wrapper.style.backgroundColor = "#f3efe6";
 	wrapper.style.overflow = "auto";
 	wrapper.style.borderRadius = "0.75rem";
 	wrapper.style.position = "relative";
@@ -811,7 +825,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		var key = "r" + row + "-c" + col;
 		var cell = document.createElement("div");
 		cell.style.borderRadius = "0.375rem";
-		cell.style.border = "1px solid #cbd5e1";
+		cell.style.border = "1px solid #e2dccf";
 		cell.style.minWidth = "0";
 		cell.style.minHeight = "0";
 		cell.style.fontSize = "10px";
@@ -846,8 +860,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					if (event.dataTransfer) {
 						event.dataTransfer.dropEffect = "move";
 					}
-					cellRef.style.borderColor = "#0f172a";
-					cellRef.style.backgroundColor = "#e2e8f0";
+					cellRef.style.borderColor = "#8a2e3b";
+					cellRef.style.backgroundColor = "#f0e0dc";
 				};
 				cellRef.ondragleave = function () {
 					renderCell(cellRef, cellKey, isCenterCell);
@@ -900,8 +914,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					if (event.dataTransfer) {
 						event.dataTransfer.dropEffect = "move";
 					}
-					cellRef.style.borderColor = "#0f172a";
-					cellRef.style.backgroundColor = "#e2e8f0";
+					cellRef.style.borderColor = "#8a2e3b";
+					cellRef.style.backgroundColor = "#f0e0dc";
 				};
 				cellRef.ondragleave = function () {
 					renderCell(cellRef, cellKey, isCenterCell);
@@ -942,8 +956,8 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	var nextBtn = document.createElement("button");
 	nextBtn.type = "button";
 	nextBtn.textContent = "Next";
-	nextBtn.style.border = "1px solid #0f172a";
-	nextBtn.style.backgroundColor = "#0f172a";
+	nextBtn.style.border = "1px solid #8a2e3b";
+	nextBtn.style.backgroundColor = "#8a2e3b";
 	nextBtn.style.color = "#ffffff";
 	nextBtn.style.borderRadius = "8px";
 	nextBtn.style.padding = "8px 12px";
