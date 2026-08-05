@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditor } from "../EditorContext";
 import { LayerMode, WeightEntry } from "../grid-types";
 import {
@@ -100,8 +100,11 @@ interface CellInfo {
 function computeShuffle(
   fixedAssignments: Record<string, string>,
   cells: CellInfo[],
+  blockedCells: Record<string, string> = {},
 ): Record<string, string> {
-  const nonCenterKeys = cells.filter((c) => !c.isCenter).map((c) => c.exportKey);
+  const nonCenterKeys = cells
+    .filter((c) => !c.isCenter && !blockedCells[c.exportKey])
+    .map((c) => c.exportKey);
   const assignedKeys = nonCenterKeys.filter((k) => fixedAssignments[k]);
   const values = assignedKeys.map((k) => fixedAssignments[k]);
 
@@ -122,6 +125,7 @@ function computeShuffle(
 function computeWeightedSample(
   weightedEntries: WeightEntry[],
   cells: CellInfo[],
+  blockedCells: Record<string, string> = {},
 ): Record<string, string> {
   const result: Record<string, string> = {};
   const totalWeight = weightedEntries.reduce((s, e) => s + e.weight, 0);
@@ -135,7 +139,7 @@ function computeWeightedSample(
   });
 
   for (const cell of cells) {
-    if (cell.isCenter) continue;
+    if (cell.isCenter || blockedCells[cell.exportKey]) continue;
     const rand = Math.random();
     const picked = cdf.find((entry) => rand <= entry.cumulative);
     if (picked) result[cell.exportKey] = picked.category;
@@ -173,10 +177,21 @@ export const PreviewPanel: React.FC = () => {
     [experimental.responseLabelsCsv],
   );
 
+  const barriers = useMemo(
+    () =>
+      layout.barriersCsv
+        .split(",")
+        .map((b) => b.trim())
+        .filter(Boolean),
+    [layout.barriersCsv],
+  );
+
   const [copied, setCopied] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeResponseLabel, setActiveResponseLabel] = useState<string | null>(null);
+  const [blockEditMode, setBlockEditMode] = useState(false);
+  const [activeBarrier, setActiveBarrier] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const [draggedResponseLabel, setDraggedResponseLabel] = useState<string | null>(null);
@@ -209,6 +224,24 @@ export const PreviewPanel: React.FC = () => {
   }, [responseLabels, activeResponseLabel]);
 
   useEffect(() => {
+    if (!barriers.length) {
+      setActiveBarrier(null);
+      return;
+    }
+    if (!activeBarrier || !barriers.includes(activeBarrier)) {
+      setActiveBarrier(barriers[0] ?? null);
+    }
+  }, [barriers, activeBarrier]);
+
+  // Leave block-edit mode when it no longer applies (no barriers, or viewing
+  // the respondent preview where researchers can't edit the layout).
+  useEffect(() => {
+    if (blockEditMode && (barriers.length === 0 || experimentalTab === "respondent")) {
+      setBlockEditMode(false);
+    }
+  }, [blockEditMode, barriers.length, experimentalTab]);
+
+  useEffect(() => {
     setAssignments({});
     setDraggedCategory(null);
     setDragOverCell(null);
@@ -216,6 +249,7 @@ export const PreviewPanel: React.FC = () => {
     setShuffleSnapshot({});
     setWeightedPreview({});
     setExperimentalTab("setup");
+    setBlockEditMode(false);
   }, [config.id, survey.selectionMode, survey.categoriesCsv]);
 
   const totalCells = layout.rows * layout.cols;
@@ -240,16 +274,23 @@ export const PreviewPanel: React.FC = () => {
   );
 
   const lockedCellKeys = useMemo(
-    () => new Set(cells.filter((cell) => cell.isCenter).map((cell) => cell.key)),
-    [cells],
+    () =>
+      new Set(
+        cells
+          .filter((cell) => cell.isCenter || layout.blockedCells[cell.exportKey])
+          .map((cell) => cell.key),
+      ),
+    [cells, layout.blockedCells],
   );
 
   // Generate weighted preview whenever entries or cells change
   useEffect(() => {
     if (expEnabled && experimental.prefillMode === "weighted") {
-      setWeightedPreview(computeWeightedSample(experimental.weightedEntries, cells));
+      setWeightedPreview(
+        computeWeightedSample(experimental.weightedEntries, cells, layout.blockedCells),
+      );
     }
-  }, [expEnabled, experimental.prefillMode, experimental.weightedEntries, cells]);
+  }, [expEnabled, experimental.prefillMode, experimental.weightedEntries, cells, layout.blockedCells]);
 
   // Derive what to display in cells
   const displayAssignments = useMemo<Record<string, string>>(() => {
@@ -314,7 +355,68 @@ export const PreviewPanel: React.FC = () => {
     });
   }, []);
 
+  // Researcher block-layout editing: press and drag to paint (or erase)
+  // barriers across many cells at once. A drag started on an already-blocked
+  // cell erases; otherwise it paints the active barrier. A working copy of the
+  // blocked map is kept in a ref so rapid drag updates never read stale state.
+  const isPaintingRef = useRef(false);
+  const paintEraseRef = useRef(false);
+  const blockedDraftRef = useRef<Record<string, string>>({});
+
+  const applyBlockPaint = useCallback(
+    (cell: CellInfo) => {
+      if (cell.isCenter || !activeBarrier) return;
+      const draft = blockedDraftRef.current;
+      const key = cell.exportKey;
+      let changed = false;
+      if (paintEraseRef.current) {
+        if (draft[key]) {
+          delete draft[key];
+          changed = true;
+        }
+      } else if (draft[key] !== activeBarrier) {
+        draft[key] = activeBarrier;
+        changed = true;
+      }
+      if (changed) {
+        dispatch({ type: "updateLayout", patch: { blockedCells: { ...draft } } });
+      }
+    },
+    [activeBarrier, dispatch],
+  );
+
+  const startBlockPaint = useCallback(
+    (cell: CellInfo) => {
+      if (!blockEditMode || cell.isCenter || !activeBarrier) return;
+      isPaintingRef.current = true;
+      // Erase when the drag begins on a cell already holding the active barrier.
+      paintEraseRef.current = layout.blockedCells[cell.exportKey] === activeBarrier;
+      blockedDraftRef.current = { ...layout.blockedCells };
+      applyBlockPaint(cell);
+    },
+    [blockEditMode, activeBarrier, layout.blockedCells, applyBlockPaint],
+  );
+
+  const continueBlockPaint = useCallback(
+    (cell: CellInfo) => {
+      if (!isPaintingRef.current || !blockEditMode) return;
+      applyBlockPaint(cell);
+    },
+    [blockEditMode, applyBlockPaint],
+  );
+
+  // A drag can end anywhere (including off the grid), so stop on any mouse-up.
+  useEffect(() => {
+    const stop = () => {
+      isPaintingRef.current = false;
+    };
+    window.addEventListener("mouseup", stop);
+    return () => window.removeEventListener("mouseup", stop);
+  }, []);
+
   const handlePaintCellClick = (cell: CellInfo) => {
+    // Block-layout editing is handled by the drag-paint mouse handlers.
+    if (blockEditMode) return;
     if (expEnabled && experimentalTab === "respondent") return;
     if (
       (!expEnabled && (!survey.allowInteraction || survey.selectionMode !== "paint")) ||
@@ -347,14 +449,19 @@ export const PreviewPanel: React.FC = () => {
 
   const switchToRespondent = () => {
     if (experimental.prefillMode === "shuffle") {
-      setShuffleSnapshot(computeShuffle(experimental.fixedAssignments, cells));
+      setShuffleSnapshot(
+        computeShuffle(experimental.fixedAssignments, cells, layout.blockedCells),
+      );
     }
     setResponses({});
+    setBlockEditMode(false);
     setExperimentalTab("respondent");
   };
 
   const regenerateWeighted = () => {
-    setWeightedPreview(computeWeightedSample(experimental.weightedEntries, cells));
+    setWeightedPreview(
+      computeWeightedSample(experimental.weightedEntries, cells, layout.blockedCells),
+    );
   };
 
   // Empty every cell in the currently editable layer of the preview.
@@ -429,6 +536,11 @@ export const PreviewPanel: React.FC = () => {
     (!expEnabled && survey.allowInteraction && categories.length > 0 && survey.selectionMode === "dropdown") ||
     (expEnabled && experimentalTab === "respondent" && responseLabels.length > 0 && survey.selectionMode === "dropdown");
 
+  // Blocking is a researcher-only, layout-level tool: available whenever
+  // barriers are defined, except on the respondent preview tab.
+  const showBlockTool =
+    barriers.length > 0 && !(expEnabled && experimentalTab === "respondent");
+
   return (
     <>
       <section
@@ -471,6 +583,64 @@ export const PreviewPanel: React.FC = () => {
             >
               Respondent preview
             </button>
+          </div>
+        )}
+
+        {/* Block-cells tool — researcher paints structural barriers/walls */}
+        {showBlockTool && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBlockEditMode((v) => !v)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                blockEditMode
+                  ? "border-ink bg-ink text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-800"
+              }`}
+            >
+              {blockEditMode ? "Done blocking" : "Block cells"}
+            </button>
+            {blockEditMode && (
+              <>
+                <span className="text-xs font-medium text-slate-600">Barrier:</span>
+                <div className="flex flex-wrap gap-1">
+                  {barriers.map((item) => {
+                    const color = layout.barrierMeta?.[item]?.color ?? "#94a3b8";
+                    const isActive = activeBarrier === item;
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setActiveBarrier(item)}
+                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
+                          isActive
+                            ? "shadow-sm"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                        style={
+                          isActive
+                            ? {
+                                borderColor: color,
+                                backgroundColor: hexToRgba(color, 0.1),
+                                color: "#0f172a",
+                              }
+                            : {}
+                        }
+                      >
+                        <span
+                          className="h-2 w-2 flex-shrink-0 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                        {item}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-xs text-slate-500">
+                  Click cells to block or unblock them.
+                </span>
+              </>
+            )}
           </div>
         )}
 
@@ -622,6 +792,81 @@ export const PreviewPanel: React.FC = () => {
             }}
           >
             {cells.map((cell) => {
+              // Blocked cells (barriers/walls) render as a static, non-interactive
+              // fill in every mode. Cells that share an EDGE with another blocked
+              // cell of the same type merge into one continuous shape (diagonal /
+              // corner-only neighbors do NOT connect). We square the shared corners
+              // and bridge the grid gap with box-shadow — shadows paint outside the
+              // box and aren't clipped, so this renders identically in Qualtrics.
+              const barrierName = layout.blockedCells[cell.exportKey];
+              if (barrierName) {
+                const bMeta = layout.barrierMeta?.[barrierName];
+                const bColor = bMeta?.color ?? "#94a3b8";
+                const bImage = bMeta?.imageUrl ?? "";
+                const gap = tuning.gridGap;
+                const radius = 8; // matches rounded-lg
+                const at = (r: number, c: number) =>
+                  layout.blockedCells[`r${r}-c${c}`] === barrierName;
+                const cUp = at(cell.row - 1, cell.col);
+                const cDown = at(cell.row + 1, cell.col);
+                const cLeft = at(cell.row, cell.col - 1);
+                const cRight = at(cell.row, cell.col + 1);
+                // Bridge the grid gap with plain background-colored filler
+                // elements sized in fixed pixels (no percentages/shadows/margins,
+                // which don't survive Qualtrics' embedded rendering). Each shared
+                // edge is bridged once (right/down); each inner corner is filled
+                // only when BOTH its bracketing edges connect, so L-turns fill in
+                // while corner-only (diagonal) neighbors never join.
+                const filler: React.CSSProperties = {
+                  position: "absolute",
+                  backgroundColor: bColor,
+                };
+                return (
+                  <div
+                    key={cell.key}
+                    onMouseDown={
+                      blockEditMode
+                        ? (e) => {
+                            e.preventDefault();
+                            startBlockPaint(cell);
+                          }
+                        : undefined
+                    }
+                    onMouseEnter={
+                      blockEditMode ? () => continueBlockPaint(cell) : undefined
+                    }
+                    className={`relative min-h-0 min-w-0${
+                      blockEditMode ? " cursor-pointer" : ""
+                    }`}
+                    style={{
+                      backgroundColor: bColor,
+                      borderTopLeftRadius: cUp || cLeft ? 0 : radius,
+                      borderTopRightRadius: cUp || cRight ? 0 : radius,
+                      borderBottomLeftRadius: cDown || cLeft ? 0 : radius,
+                      borderBottomRightRadius: cDown || cRight ? 0 : radius,
+                      zIndex: 1,
+                    }}
+                  >
+                    {/* Edge bridges */}
+                    {cRight && <div style={{ ...filler, top: 0, bottom: 0, right: -gap, width: gap }} />}
+                    {cDown && <div style={{ ...filler, left: 0, right: 0, bottom: -gap, height: gap }} />}
+                    {/* Inner-corner fills (both bracketing edges connect) */}
+                    {cRight && cDown && <div style={{ ...filler, right: -gap, width: gap, bottom: -gap, height: gap }} />}
+                    {cLeft && cDown && <div style={{ ...filler, left: -gap, width: gap, bottom: -gap, height: gap }} />}
+                    {cRight && cUp && <div style={{ ...filler, right: -gap, width: gap, top: -gap, height: gap }} />}
+                    {cLeft && cUp && <div style={{ ...filler, left: -gap, width: gap, top: -gap, height: gap }} />}
+                    {bImage && (
+                      <img
+                        src={bImage}
+                        alt={barrierName}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        style={{ borderRadius: "inherit", zIndex: 1 }}
+                      />
+                    )}
+                  </div>
+                );
+              }
+
               // For experimental mode use exportKey for lookup, else use key
               const lookupKey = expEnabled ? cell.exportKey : cell.key;
               const assignedCat = displayAssignments[lookupKey];
@@ -831,6 +1076,17 @@ export const PreviewPanel: React.FC = () => {
                 <div
                   key={cell.key}
                   onClick={() => handlePaintCellClick(cell)}
+                  onMouseDown={
+                    blockEditMode
+                      ? (e) => {
+                          e.preventDefault();
+                          startBlockPaint(cell);
+                        }
+                      : undefined
+                  }
+                  onMouseEnter={
+                    blockEditMode ? () => continueBlockPaint(cell) : undefined
+                  }
                   onDragOver={(e) => {
                     if (expEnabled || !survey.allowInteraction || survey.selectionMode !== "dragdrop") {
                       return;
@@ -871,7 +1127,8 @@ export const PreviewPanel: React.FC = () => {
                     setDraggedCategory(null);
                   }}
                   className={`relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border font-medium ${
-                    ((!expEnabled && survey.allowInteraction && survey.selectionMode === "paint") ||
+                    ((blockEditMode && !cell.isCenter) ||
+                      (!expEnabled && survey.allowInteraction && survey.selectionMode === "paint") ||
                       (expEnabled &&
                         experimentalTab === "setup" &&
                         experimental.prefillMode !== "weighted")) &&

@@ -97,6 +97,10 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	var prefills = {};
 	var experimentalResponses = {};
 
+	// Structural barriers (walls): blocked cells are non-interactive in every mode.
+	var blockedCells = (cfg.layout && cfg.layout.blockedCells) || {};
+	var barrierMeta = (cfg.layout && cfg.layout.barrierMeta) || {};
+
 	if (surveyCfg.categoriesCsv) {
 		categories = surveyCfg.categoriesCsv
 			.split(",")
@@ -120,6 +124,76 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		return surveyCfg.categoryMeta[catName] || {};
 	}
 
+	function getBarrierMeta(name) {
+		return barrierMeta[name] || {};
+	}
+
+	// Append a background-colored filler positioned with fixed pixel offsets.
+	// css keys are among top/bottom/left/right/width/height (all "<n>px").
+	function makeFiller(color, css) {
+		var f = document.createElement("div");
+		f.style.position = "absolute";
+		f.style.backgroundColor = color;
+		for (var k in css) { f.style[k] = css[k]; }
+		return f;
+	}
+
+	// Render a blocked cell (barrier/wall). Cells that share an EDGE with another
+	// blocked cell of the same type merge into one continuous shape (diagonal /
+	// corner-only neighbors do NOT connect). We square the shared corners and
+	// bridge the grid gap with plain background-colored filler elements sized in
+	// fixed pixels — no percentages, shadows, or margins, which don't survive
+	// Qualtrics' embedded rendering.
+	function renderBlockedCell(cellRef, row, col, name) {
+		cellRef.innerHTML = "";
+		var meta = getBarrierMeta(name);
+		var color = meta.color || "#94a3b8";
+		var image = meta.imageUrl || "";
+		var gap = cfg.tuning.gridGap;
+		var g = gap + "px";
+		var ng = -gap + "px";
+		var radius = 6; // matches the loop's 0.375rem cell radius
+		function at(r, c) { return blockedCells["r" + r + "-c" + c] === name; }
+		var cUp = at(row - 1, col);
+		var cDown = at(row + 1, col);
+		var cLeft = at(row, col - 1);
+		var cRight = at(row, col + 1);
+
+		cellRef.style.position = "relative";
+		cellRef.style.border = "none";
+		cellRef.style.backgroundColor = color;
+		cellRef.style.borderTopLeftRadius = (cUp || cLeft ? 0 : radius) + "px";
+		cellRef.style.borderTopRightRadius = (cUp || cRight ? 0 : radius) + "px";
+		cellRef.style.borderBottomLeftRadius = (cDown || cLeft ? 0 : radius) + "px";
+		cellRef.style.borderBottomRightRadius = (cDown || cRight ? 0 : radius) + "px";
+		cellRef.style.zIndex = "1";
+
+		// Edge bridges (each shared edge filled once, by the left/top cell) and
+		// inner-corner fills (only when both bracketing edges connect, so
+		// corner-only diagonal neighbors never join).
+		if (cRight) cellRef.appendChild(makeFiller(color, { top: "0", bottom: "0", right: ng, width: g }));
+		if (cDown) cellRef.appendChild(makeFiller(color, { left: "0", right: "0", bottom: ng, height: g }));
+		if (cRight && cDown) cellRef.appendChild(makeFiller(color, { right: ng, width: g, bottom: ng, height: g }));
+		if (cLeft && cDown) cellRef.appendChild(makeFiller(color, { left: ng, width: g, bottom: ng, height: g }));
+		if (cRight && cUp) cellRef.appendChild(makeFiller(color, { right: ng, width: g, top: ng, height: g }));
+		if (cLeft && cUp) cellRef.appendChild(makeFiller(color, { left: ng, width: g, top: ng, height: g }));
+
+		if (image) {
+			var img = document.createElement("img");
+			img.src = image;
+			img.alt = name;
+			img.style.position = "absolute";
+			img.style.top = "0";
+			img.style.left = "0";
+			img.style.width = "100%";
+			img.style.height = "100%";
+			img.style.objectFit = "cover";
+			img.style.borderRadius = "inherit";
+			img.style.zIndex = "1";
+			cellRef.appendChild(img);
+		}
+	}
+
 	function getResponseMeta(lbl) {
 		if (!expCfg.responseLabelMeta) return {};
 		return expCfg.responseLabelMeta[lbl] || {};
@@ -138,10 +212,13 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		if (!isExperimental) return;
 		if (prefillMode === "fixed") {
 			Object.keys(fixedAssignments).forEach(function (k) {
+				if (blockedCells[k]) return;
 				prefills[k] = fixedAssignments[k];
 			});
 		} else if (prefillMode === "shuffle") {
-			var keys = Object.keys(fixedAssignments);
+			var keys = Object.keys(fixedAssignments).filter(function (k) {
+				return !blockedCells[k];
+			});
 			var values = keys.map(function (k) { return fixedAssignments[k]; });
 			for (var si = values.length - 1; si > 0; si--) {
 				var sj = Math.floor(Math.random() * (si + 1));
@@ -163,6 +240,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					var isCenter = cfg.layout.includeCenterCell && ri === centerRow && ci === centerCol;
 					if (isCenter) continue;
 					var k = "r" + ri + "-c" + ci;
+					if (blockedCells[k]) continue;
 					var rand = Math.random();
 					for (var ei = 0; ei < cdf.length; ei++) {
 						if (rand <= cdf[ei].cumulative) {
@@ -503,6 +581,19 @@ Qualtrics.SurveyEngine.addOnReady(function()
 	}
 
 	function renderCell(cellRef, key, isCenterCell) {
+		var barrierName = blockedCells[key];
+		if (barrierName) {
+			// Parse "r{row}-c{col}" without a regex (regex escapes don't survive
+			// this template string). key.slice(1) drops the leading "r".
+			var parts = key.slice(1).split("-c");
+			renderBlockedCell(
+				cellRef,
+				parseInt(parts[0], 10),
+				parseInt(parts[1], 10),
+				barrierName,
+			);
+			return;
+		}
 		if (isExperimental) {
 			renderExperimentalCell(cellRef, key, isCenterCell);
 			return;
@@ -823,6 +914,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		var col = (i % cfg.layout.cols) + 1;
 		var isCenter = cfg.layout.includeCenterCell && row === centerRowVal && col === centerColVal;
 		var key = "r" + row + "-c" + col;
+		var isBlocked = !!blockedCells[key];
 		var cell = document.createElement("div");
 		cell.style.borderRadius = "0.375rem";
 		cell.style.border = "1px solid #e2dccf";
@@ -834,7 +926,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 
 		renderCell(cell, key, isCenter);
 
-		if (!isExperimental && allowInteraction && selectionMode === "paint") {
+		if (!isExperimental && allowInteraction && selectionMode === "paint" && !isBlocked) {
 			cell.style.cursor = isCenter ? "default" : "pointer";
 			(function (cellRef, cellKey, isCenterCell) {
 				cellRef.onclick = function () {
@@ -851,7 +943,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			})(cell, key, isCenter);
 		}
 
-		if (!isExperimental && allowInteraction && selectionMode === "dragdrop") {
+		if (!isExperimental && allowInteraction && selectionMode === "dragdrop" && !isBlocked) {
 			(function (cellRef, cellKey, isCenterCell) {
 				cellRef.style.cursor = isCenterCell ? "default" : "copy";
 				cellRef.ondragover = function (event) {
@@ -888,7 +980,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			})(cell, key, isCenter);
 		}
 
-		if (isExperimental && responseLabels.length > 0 && selectionMode === "paint") {
+		if (isExperimental && responseLabels.length > 0 && selectionMode === "paint" && !isBlocked) {
 			cell.style.cursor = isCenter ? "default" : "pointer";
 			(function (cellRef, cellKey, isCenterCell) {
 				cellRef.onclick = function () {
@@ -905,7 +997,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			})(cell, key, isCenter);
 		}
 
-		if (isExperimental && responseLabels.length > 0 && selectionMode === "dragdrop") {
+		if (isExperimental && responseLabels.length > 0 && selectionMode === "dragdrop" && !isBlocked) {
 			(function (cellRef, cellKey, isCenterCell) {
 				cellRef.style.cursor = isCenterCell ? "default" : "copy";
 				cellRef.ondragover = function (event) {

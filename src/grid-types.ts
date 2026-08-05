@@ -9,6 +9,16 @@ export interface LayoutConfig {
   centerRow: number | null; // 1-based; null = auto
   centerCol: number | null; // 1-based; null = auto
   backgroundImageUrl: string;
+  /**
+   * Comma-separated barrier type names, e.g. "Wall, Road". Barriers are
+   * structural: a blocked cell is non-interactive and acts as a wall. Mirrors
+   * survey.categoriesCsv.
+   */
+  barriersCsv: string;
+  /** Per-barrier appearance (color + optional image) keyed by name. Mirrors survey.categoryMeta. */
+  barrierMeta: Record<string, CategoryMeta>;
+  /** exportKey "r{row}-c{col}" -> barrier type name. Mirrors experimental.fixedAssignments. */
+  blockedCells: Record<string, string>;
 }
 
 export interface TuningConfig {

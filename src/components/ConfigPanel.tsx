@@ -310,6 +310,31 @@ const QuestionGridForm: React.FC = () => {
           onChange={(v) => update({ backgroundImageUrl: v })}
         />
       </label>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-[10px] font-bold tracking-widest text-ink-faint">
+          BARRIERS
+        </span>
+        <p className="text-xs text-ink-muted">
+          Barriers let you block cells out — use them to create things that
+          signify walls or roads. Add a barrier, then use “Block cells” in the
+          preview to block out cells. Blocked cells are non-interactive;
+          adjacent cells of the same type join into one shape.
+        </p>
+        <CategoryChips
+          items={chipItemsFromMeta(layout.barriersCsv, layout.barrierMeta, "#94a3b8")}
+          onChange={(items) =>
+            update({
+              barriersCsv: items.map((i) => i.name).join(", "),
+              barrierMeta: chipItemsToMeta(items),
+            })
+          }
+          addLabel="+ Add barrier"
+          editorTitle="EDITING BARRIER"
+          showClearAll
+          imageHint="Optional image tiled across the barrier (e.g. a wall texture)."
+        />
+      </div>
     </div>
   );
 };

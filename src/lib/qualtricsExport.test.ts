@@ -47,6 +47,9 @@ function makeConfig(overrides: Partial<GridConfig> = {}): GridConfig {
       centerRow: null,
       centerCol: null,
       backgroundImageUrl: "",
+      barriersCsv: "",
+      barrierMeta: {},
+      blockedCells: {},
     },
     tuning: {
       gridGap: 4,
@@ -317,5 +320,118 @@ describe("buildQualtricsSnippet experimental respondent input methods", () => {
       const js = buildQualtricsSnippet(makeExperimentalConfig(mode));
       expect(js).toContain(`"selectionMode": "${mode}"`);
     }
+  });
+});
+
+// ─── Blocked cells (barriers) render + connect in the browser DOM ────────────
+
+/**
+ * Execute a generated snippet inside jsdom with a stubbed Qualtrics engine,
+ * returning the rendered question container so tests can inspect the DOM.
+ */
+function runSnippet(config: GridConfig): HTMLElement {
+  const snippet = buildQualtricsSnippet(config);
+  const readyCbs: Array<() => void> = [];
+  (globalThis as unknown as { Qualtrics: unknown }).Qualtrics = {
+    SurveyEngine: {
+      addOnload: () => {},
+      addOnReady: (cb: () => void) => readyCbs.push(cb),
+      addOnUnload: () => {},
+      setEmbeddedData: () => {},
+    },
+  };
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const question = {
+    getQuestionTextContainer: () => container,
+    clickNextButton: () => {},
+  };
+  // The snippet is top-level code that registers callbacks on Qualtrics.
+  new Function(snippet)();
+  readyCbs.forEach((cb) => cb.call(question));
+  return container;
+}
+
+function gridCells(container: HTMLElement): HTMLElement[] {
+  const grid = Array.from(container.querySelectorAll("div")).find(
+    (d) => d.style.display === "grid",
+  );
+  if (!grid) throw new Error("grid not found");
+  return Array.from(grid.children) as HTMLElement[];
+}
+
+describe("blocked cells in the exported grid", () => {
+  // 3×3 grid, top-left L of "Wall": r1-c1, r1-c2, r2-c1
+  const config = makeConfig({
+    layout: {
+      questionText: "Q",
+      rows: 3,
+      cols: 3,
+      includeCenterCell: false,
+      centerCellLabel: "",
+      centerRow: null,
+      centerCol: null,
+      backgroundImageUrl: "",
+      barriersCsv: "Wall",
+      barrierMeta: { Wall: { color: "#334155", imageUrl: "" } },
+      blockedCells: { "r1-c1": "Wall", "r1-c2": "Wall", "r2-c1": "Wall" },
+    },
+  });
+
+  const TEAL = "rgb(51, 65, 85)"; // rgb form of #334155
+
+  // A blocked cell's gap-bridging fillers are its absolutely-positioned child
+  // divs painted with the barrier color.
+  function fillers(cell: HTMLElement): HTMLElement[] {
+    return (Array.from(cell.children) as HTMLElement[]).filter(
+      (c) =>
+        c.tagName === "DIV" &&
+        c.style.position === "absolute" &&
+        c.style.backgroundColor === TEAL,
+    );
+  }
+
+  it("renders (without error) and fills every blocked cell with the barrier color", () => {
+    const cells = gridCells(runSnippet(config));
+    for (const idx of [0, 1, 3]) {
+      expect(cells[idx].style.backgroundColor).toBe(TEAL);
+    }
+  });
+
+  it("leaves normal cells unblocked (not filled with the barrier color)", () => {
+    const cells = gridCells(runSnippet(config));
+    // r3-c3 (index 8) is a normal paint cell.
+    expect(cells[8].style.backgroundColor).not.toBe(TEAL);
+  });
+
+  it("bridges every shared edge with a background-colored filler", () => {
+    const cells = gridCells(runSnippet(config));
+    // The top-left cell shares its right edge (r1-c2) and bottom edge (r2-c1),
+    // so it carries the right + down edge bridges and the inner-corner fill.
+    const parts = fillers(cells[0]);
+    expect(parts.length).toBe(3);
+    // Fillers extend into the gaps via fixed-pixel offsets (no percentages).
+    expect(parts.some((p) => p.style.right === "-4px")).toBe(true); // right edge
+    expect(parts.some((p) => p.style.bottom === "-4px")).toBe(true); // down edge
+  });
+
+  it("does NOT bridge a cell that only touches diagonally", () => {
+    // r1-c1 (Wall) and r2-c2 (Wall) share only a corner — no edge.
+    const diag = makeConfig({
+      layout: {
+        ...config.layout,
+        blockedCells: { "r1-c1": "Wall", "r2-c2": "Wall" },
+      },
+    });
+    const cells = gridCells(runSnippet(diag));
+    expect(fillers(cells[0]).length).toBe(0); // r1-c1
+    expect(fillers(cells[4]).length).toBe(0); // r2-c2
+  });
+
+  it("skips interaction handlers for blocked cells", () => {
+    const js = buildQualtricsSnippet(config);
+    expect(js).toContain("var isBlocked = !!blockedCells[key];");
+    expect(js).toContain('selectionMode === "paint" && !isBlocked');
+    expect(js).toContain('selectionMode === "dragdrop" && !isBlocked');
   });
 });
