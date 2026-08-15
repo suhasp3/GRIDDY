@@ -158,6 +158,10 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		var cDown = at(row + 1, col);
 		var cLeft = at(row, col - 1);
 		var cRight = at(row, col + 1);
+		var cUpLeft = at(row - 1, col - 1);
+		var cUpRight = at(row - 1, col + 1);
+		var cDownLeft = at(row + 1, col - 1);
+		var cDownRight = at(row + 1, col + 1);
 
 		cellRef.style.position = "relative";
 		cellRef.style.border = "none";
@@ -169,14 +173,16 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		cellRef.style.zIndex = "1";
 
 		// Edge bridges (each shared edge filled once, by the left/top cell) and
-		// inner-corner fills (only when both bracketing edges connect, so
-		// corner-only diagonal neighbors never join).
+		// inner-corner fills (only when both bracketing edges AND the diagonal
+		// cell all connect — i.e. a true solid block, so the gap doesn't punch a
+		// hole through its middle. An L-turn (diagonal cell unblocked) leaves its
+		// corner open instead of poking out toward it.
 		if (cRight) cellRef.appendChild(makeFiller(color, { top: "0", bottom: "0", right: ng, width: g }));
 		if (cDown) cellRef.appendChild(makeFiller(color, { left: "0", right: "0", bottom: ng, height: g }));
-		if (cRight && cDown) cellRef.appendChild(makeFiller(color, { right: ng, width: g, bottom: ng, height: g }));
-		if (cLeft && cDown) cellRef.appendChild(makeFiller(color, { left: ng, width: g, bottom: ng, height: g }));
-		if (cRight && cUp) cellRef.appendChild(makeFiller(color, { right: ng, width: g, top: ng, height: g }));
-		if (cLeft && cUp) cellRef.appendChild(makeFiller(color, { left: ng, width: g, top: ng, height: g }));
+		if (cRight && cDown && cDownRight) cellRef.appendChild(makeFiller(color, { right: ng, width: g, bottom: ng, height: g }));
+		if (cLeft && cDown && cDownLeft) cellRef.appendChild(makeFiller(color, { left: ng, width: g, bottom: ng, height: g }));
+		if (cRight && cUp && cUpRight) cellRef.appendChild(makeFiller(color, { right: ng, width: g, top: ng, height: g }));
+		if (cLeft && cUp && cUpLeft) cellRef.appendChild(makeFiller(color, { left: ng, width: g, top: ng, height: g }));
 
 		if (image) {
 			var img = document.createElement("img");

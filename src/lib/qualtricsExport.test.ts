@@ -406,10 +406,8 @@ describe("blocked cells in the exported grid", () => {
 
   it("bridges every shared edge with a background-colored filler", () => {
     const cells = gridCells(runSnippet(config));
-    // The top-left cell shares its right edge (r1-c2) and bottom edge (r2-c1),
-    // so it carries the right + down edge bridges and the inner-corner fill.
+    // The top-left cell shares its right edge (r1-c2) and bottom edge (r2-c1).
     const parts = fillers(cells[0]);
-    expect(parts.length).toBe(3);
     // Fillers extend into the gaps via fixed-pixel offsets (no percentages).
     expect(parts.some((p) => p.style.right === "-4px")).toBe(true); // right edge
     expect(parts.some((p) => p.style.bottom === "-4px")).toBe(true); // down edge
@@ -426,6 +424,41 @@ describe("blocked cells in the exported grid", () => {
     const cells = gridCells(runSnippet(diag));
     expect(fillers(cells[0]).length).toBe(0); // r1-c1
     expect(fillers(cells[4]).length).toBe(0); // r2-c2
+  });
+
+  it("does NOT fill the concave corner of an L-shape (no floating notch)", () => {
+    // r1-c1, r1-c2, r2-c1 form an L; the diagonal r2-c2 is NOT blocked, so the
+    // corner between them should stay open instead of poking a square toward it.
+    const cells = gridCells(runSnippet(config));
+    const parts = fillers(cells[0]); // r1-c1
+    expect(parts.length).toBe(2); // just the right + down edge bridges
+    // Neither edge bridge is a square corner filler (offset on both axes).
+    expect(
+      parts.some((p) => p.style.right === "-4px" && p.style.bottom === "-4px"),
+    ).toBe(false);
+  });
+
+  it("fills the inner corner of a true solid 2x2 block", () => {
+    // r1-c1, r1-c2, r2-c1, r2-c2 are all Wall — a solid block, so the shared
+    // center intersection must be filled or the grid gap punches a hole in it.
+    const solid = makeConfig({
+      layout: {
+        ...config.layout,
+        blockedCells: {
+          "r1-c1": "Wall",
+          "r1-c2": "Wall",
+          "r2-c1": "Wall",
+          "r2-c2": "Wall",
+        },
+      },
+    });
+    const cells = gridCells(runSnippet(solid));
+    const parts = fillers(cells[0]); // r1-c1
+    // right edge + down edge + the now-legitimate inner corner fill.
+    expect(parts.length).toBe(3);
+    expect(
+      parts.some((p) => p.style.right === "-4px" && p.style.bottom === "-4px"),
+    ).toBe(true);
   });
 
   it("skips interaction handlers for blocked cells", () => {

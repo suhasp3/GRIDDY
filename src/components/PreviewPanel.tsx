@@ -811,12 +811,18 @@ export const PreviewPanel: React.FC = () => {
                 const cDown = at(cell.row + 1, cell.col);
                 const cLeft = at(cell.row, cell.col - 1);
                 const cRight = at(cell.row, cell.col + 1);
+                const cUpLeft = at(cell.row - 1, cell.col - 1);
+                const cUpRight = at(cell.row - 1, cell.col + 1);
+                const cDownLeft = at(cell.row + 1, cell.col - 1);
+                const cDownRight = at(cell.row + 1, cell.col + 1);
                 // Bridge the grid gap with plain background-colored filler
                 // elements sized in fixed pixels (no percentages/shadows/margins,
                 // which don't survive Qualtrics' embedded rendering). Each shared
                 // edge is bridged once (right/down); each inner corner is filled
-                // only when BOTH its bracketing edges connect, so L-turns fill in
-                // while corner-only (diagonal) neighbors never join.
+                // only when both its bracketing edges AND the diagonal cell all
+                // connect — i.e. a true solid block, so the gap doesn't punch a
+                // hole through its middle. An L-turn (diagonal cell unblocked)
+                // leaves its corner open instead of poking out toward it.
                 const filler: React.CSSProperties = {
                   position: "absolute",
                   backgroundColor: bColor,
@@ -850,11 +856,11 @@ export const PreviewPanel: React.FC = () => {
                     {/* Edge bridges */}
                     {cRight && <div style={{ ...filler, top: 0, bottom: 0, right: -gap, width: gap }} />}
                     {cDown && <div style={{ ...filler, left: 0, right: 0, bottom: -gap, height: gap }} />}
-                    {/* Inner-corner fills (both bracketing edges connect) */}
-                    {cRight && cDown && <div style={{ ...filler, right: -gap, width: gap, bottom: -gap, height: gap }} />}
-                    {cLeft && cDown && <div style={{ ...filler, left: -gap, width: gap, bottom: -gap, height: gap }} />}
-                    {cRight && cUp && <div style={{ ...filler, right: -gap, width: gap, top: -gap, height: gap }} />}
-                    {cLeft && cUp && <div style={{ ...filler, left: -gap, width: gap, top: -gap, height: gap }} />}
+                    {/* Inner-corner fills (only for a true solid-block corner) */}
+                    {cRight && cDown && cDownRight && <div style={{ ...filler, right: -gap, width: gap, bottom: -gap, height: gap }} />}
+                    {cLeft && cDown && cDownLeft && <div style={{ ...filler, left: -gap, width: gap, bottom: -gap, height: gap }} />}
+                    {cRight && cUp && cUpRight && <div style={{ ...filler, right: -gap, width: gap, top: -gap, height: gap }} />}
+                    {cLeft && cUp && cUpLeft && <div style={{ ...filler, left: -gap, width: gap, top: -gap, height: gap }} />}
                     {bImage && (
                       <img
                         src={bImage}
