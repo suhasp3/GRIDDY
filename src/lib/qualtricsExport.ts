@@ -466,9 +466,32 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			cellRef.appendChild(centerLabel);
 		}
 
+		var assigned = assignments[key];
+		if (assigned) {
+			var meta = getCategoryMeta(assigned);
+			var assignedColor = meta.color || "#60a5fa";
+			cellRef.style.backgroundColor = hexToRgba(assignedColor, 0.2);
+			cellRef.style.borderColor = assignedColor;
+
+			var assignedLabel = document.createElement("div");
+			assignedLabel.style.flex = "1";
+			assignedLabel.style.minHeight = "0";
+			assignedLabel.style.display = "flex";
+			assignedLabel.style.alignItems = "center";
+			assignedLabel.style.justifyContent = "center";
+			assignedLabel.style.overflow = "hidden";
+			assignedLabel.style.textAlign = "center";
+			assignedLabel.style.fontSize = "10px";
+			assignedLabel.style.fontWeight = "500";
+			assignedLabel.style.lineHeight = "1.2";
+			assignedLabel.textContent = assigned;
+			cellRef.appendChild(assignedLabel);
+		}
+
 		var select = document.createElement("select");
 		select.style.width = "100%";
 		select.style.minWidth = "0";
+		select.style.flexShrink = "0";
 		select.style.border = "1px solid #e2dccf";
 		select.style.borderRadius = "6px";
 		select.style.backgroundColor = "#fbf8f1";
@@ -488,7 +511,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			select.appendChild(option);
 		});
 
-		select.value = assignments[key] || "";
+		select.value = assigned || "";
 		select.onchange = function () {
 			if (!select.value) {
 				delete assignments[key];
@@ -508,15 +531,15 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			return;
 		}
 
+		if (allowInteraction && selectionMode === "dropdown" && !isCenterCell) {
+			renderDropdownCell(cellRef, key, isCenterCell);
+			return;
+		}
+
 		var assigned = assignments[key];
 		if (assigned) {
 			var meta = getCategoryMeta(assigned);
 			renderCellContent(cellRef, assigned, meta.color || "#60a5fa", meta.imageUrl || "");
-			return;
-		}
-
-		if (allowInteraction && selectionMode === "dropdown" && !isCenterCell) {
-			renderDropdownCell(cellRef, key, isCenterCell);
 			return;
 		}
 
@@ -533,6 +556,57 @@ Qualtrics.SurveyEngine.addOnReady(function()
 			label.style.textAlign = "center";
 			label.style.lineHeight = "1.2";
 			cellRef.appendChild(label);
+		}
+	}
+
+	function addClearButton(cellRef, onClear) {
+		cellRef.style.position = "relative";
+		var delBtn = document.createElement("button");
+		delBtn.type = "button";
+		delBtn.textContent = "×";
+		delBtn.title = "Clear cell";
+		delBtn.style.position = "absolute";
+		delBtn.style.top = "2px";
+		delBtn.style.right = "2px";
+		delBtn.style.width = "14px";
+		delBtn.style.height = "14px";
+		delBtn.style.lineHeight = "1";
+		delBtn.style.display = "flex";
+		delBtn.style.alignItems = "center";
+		delBtn.style.justifyContent = "center";
+		delBtn.style.borderRadius = "9999px";
+		delBtn.style.border = "none";
+		delBtn.style.backgroundColor = "rgba(42,36,28,0.55)";
+		delBtn.style.color = "#fbf8f1";
+		delBtn.style.fontSize = "10px";
+		delBtn.style.cursor = "pointer";
+		delBtn.style.zIndex = "20";
+		delBtn.onclick = function (event) {
+			event.stopPropagation();
+			onClear();
+		};
+		cellRef.appendChild(delBtn);
+	}
+
+	// Drag-drop mode: renders the cell, then overlays a small "x" clear
+	// button when it holds something, since dropping a new label always
+	// replaces the old one but there was previously no way to empty a cell
+	// without dragging a "Clear" chip precisely onto it.
+	function renderCellWithDelete(cellRef, key, isCenterCell) {
+		renderCell(cellRef, key, isCenterCell);
+		if (isCenterCell || selectionMode !== "dragdrop") return;
+		if (!isExperimental && allowInteraction && assignments[key]) {
+			addClearButton(cellRef, function () {
+				delete assignments[key];
+				persistAll();
+				renderCellWithDelete(cellRef, key, isCenterCell);
+			});
+		} else if (isExperimental && responseLabels.length > 0 && experimentalResponses[key]) {
+			addClearButton(cellRef, function () {
+				delete experimentalResponses[key];
+				persistAll();
+				renderCellWithDelete(cellRef, key, isCenterCell);
+			});
 		}
 	}
 
@@ -832,7 +906,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		cell.style.fontWeight = "500";
 		cell.style.transition = "border-color 120ms ease, background-color 120ms ease";
 
-		renderCell(cell, key, isCenter);
+		renderCellWithDelete(cell, key, isCenter);
 
 		if (!isExperimental && allowInteraction && selectionMode === "paint") {
 			cell.style.cursor = isCenter ? "default" : "pointer";
@@ -864,7 +938,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					cellRef.style.backgroundColor = "#f0e0dc";
 				};
 				cellRef.ondragleave = function () {
-					renderCell(cellRef, cellKey, isCenterCell);
+					renderCellWithDelete(cellRef, cellKey, isCenterCell);
 				};
 				cellRef.ondrop = function (event) {
 					if (isCenterCell) return;
@@ -874,7 +948,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 						dropped = event.dataTransfer.getData("text/plain");
 					}
 					if (!dropped) {
-						renderCell(cellRef, cellKey, isCenterCell);
+						renderCellWithDelete(cellRef, cellKey, isCenterCell);
 						return;
 					}
 					if (dropped === "__CLEAR__") {
@@ -883,7 +957,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 						assignments[cellKey] = dropped;
 					}
 					persistAll();
-					renderCell(cellRef, cellKey, isCenterCell);
+					renderCellWithDelete(cellRef, cellKey, isCenterCell);
 				};
 			})(cell, key, isCenter);
 		}
@@ -918,7 +992,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 					cellRef.style.backgroundColor = "#f0e0dc";
 				};
 				cellRef.ondragleave = function () {
-					renderCell(cellRef, cellKey, isCenterCell);
+					renderCellWithDelete(cellRef, cellKey, isCenterCell);
 				};
 				cellRef.ondrop = function (event) {
 					if (isCenterCell) return;
@@ -928,7 +1002,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 						dropped = event.dataTransfer.getData("text/plain");
 					}
 					if (!dropped) {
-						renderCell(cellRef, cellKey, isCenterCell);
+						renderCellWithDelete(cellRef, cellKey, isCenterCell);
 						return;
 					}
 					if (dropped === "__CLEAR_RESP__") {
@@ -937,7 +1011,7 @@ Qualtrics.SurveyEngine.addOnReady(function()
 						experimentalResponses[cellKey] = dropped;
 					}
 					persistAll();
-					renderCell(cellRef, cellKey, isCenterCell);
+					renderCellWithDelete(cellRef, cellKey, isCenterCell);
 				};
 			})(cell, key, isCenter);
 		}

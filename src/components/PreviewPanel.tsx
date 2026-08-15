@@ -822,6 +822,20 @@ export const PreviewPanel: React.FC = () => {
                         </span>
                       </div>
                     )}
+                    {survey.selectionMode === "dragdrop" && hasResponse && (
+                      <button
+                        type="button"
+                        aria-label={`Clear reaction for row ${cell.row} column ${cell.col}`}
+                        title="Clear reaction"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          applyResponse(cell.exportKey, null);
+                        }}
+                        className="absolute right-1 top-1 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-black/40 text-[9px] leading-none text-white hover:bg-black/60"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 );
               }
@@ -921,25 +935,29 @@ export const PreviewPanel: React.FC = () => {
                     {`r${cell.row}·c${cell.col}`}
                   </span>
 
-                  {assignedCat ? (
-                    renderAssignedContent(
-                      assignedCat,
-                      catImage,
-                      catColor,
-                      catLayerMode,
-                      expEnabled ? "top" : "bottom",
-                    )
-                  ) : !expEnabled && survey.allowInteraction &&
-                    survey.selectionMode === "dropdown" &&
-                    !cell.isCenter ? (
-                    <div className="flex h-full flex-col justify-center gap-1 p-1 pt-3">
+                  {!expEnabled &&
+                  survey.allowInteraction &&
+                  survey.selectionMode === "dropdown" &&
+                  !cell.isCenter ? (
+                    <div className="flex h-full min-h-0 flex-col gap-1 p-1 pt-3">
+                      {assignedCat && (
+                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                          {renderAssignedContent(
+                            assignedCat,
+                            catImage,
+                            catColor,
+                            catLayerMode,
+                            "bottom",
+                          )}
+                        </div>
+                      )}
                       <select
                         aria-label={`Choose label for row ${cell.row} column ${cell.col}`}
-                        value={assignments[cell.key] ?? ""}
+                        value={assignedCat ?? ""}
                         onChange={(e) =>
                           applyAssignment(cell.exportKey, cell.key, e.target.value || null)
                         }
-                        className="w-full min-w-0 rounded border border-hairline bg-white px-1.5 py-1 text-[10px] text-ink outline-none"
+                        className="w-full min-w-0 flex-shrink-0 rounded border border-hairline bg-white px-1.5 py-1 text-[10px] text-ink outline-none"
                       >
                         <option value="">Choose label</option>
                         {categories.map((cat) => (
@@ -949,6 +967,33 @@ export const PreviewPanel: React.FC = () => {
                         ))}
                       </select>
                     </div>
+                  ) : assignedCat ? (
+                    <>
+                      {renderAssignedContent(
+                        assignedCat,
+                        catImage,
+                        catColor,
+                        catLayerMode,
+                        expEnabled ? "top" : "bottom",
+                      )}
+                      {!expEnabled &&
+                        survey.allowInteraction &&
+                        survey.selectionMode === "dragdrop" &&
+                        !cell.isCenter && (
+                          <button
+                            type="button"
+                            aria-label={`Clear row ${cell.row} column ${cell.col}`}
+                            title="Clear cell"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              applyAssignment(cell.exportKey, cell.key, null);
+                            }}
+                            className="absolute right-1 top-1 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-black/40 text-[9px] leading-none text-white hover:bg-black/60"
+                          >
+                            ×
+                          </button>
+                        )}
+                    </>
                   ) : cell.isCenter ? (
                     <div className="flex flex-1 items-center justify-center p-1 pt-3">
                       <span className="w-full break-words text-center font-serif text-[10px] font-semibold leading-tight text-accent">
