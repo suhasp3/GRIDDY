@@ -1,6 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../lib/authContext";
 import {
   deleteSurvey,
   exportSurveys,
@@ -41,7 +40,6 @@ function makeExportFileName() {
 }
 
 export default function HistoryPage() {
-  const { user, loading: authLoading } = useAuth();
   const { dispatch } = useEditor();
   const navigate = useNavigate();
   const [surveys, setSurveys] = useState<SurveyMeta[]>([]);
@@ -74,17 +72,17 @@ export default function HistoryPage() {
   useEffect(() => {
     setFetching(true);
     setError(null);
-    listSurveys(user?.id)
+    listSurveys()
       .then(setSurveys)
       .catch((e) => setError((e as Error).message))
       .finally(() => setFetching(false));
-  }, [user?.id]);
+  }, []);
 
   const refreshSurveys = async () => {
     setFetching(true);
     setError(null);
     try {
-      const data = await listSurveys(user?.id);
+      const data = await listSurveys();
       setSurveys(data);
     } catch (e) {
       setError((e as Error).message);
@@ -95,7 +93,7 @@ export default function HistoryPage() {
 
   const handleOpen = async (id: string) => {
     try {
-      const config = await loadSurvey(id, user?.id);
+      const config = await loadSurvey(id);
       dispatch({ type: "setConfig", config });
       dispatch({ type: "markSaved" });
       navigate("/");
@@ -109,7 +107,7 @@ export default function HistoryPage() {
     setError(null);
     setNotice(null);
     try {
-      const payload = await exportSurveys(user?.id);
+      const payload = await exportSurveys();
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
       });
@@ -144,7 +142,7 @@ export default function HistoryPage() {
     setNotice(null);
 
     try {
-      const payload = await exportSurveys(user?.id);
+      const payload = await exportSurveys();
       const selected = payload.surveys.filter((survey) =>
         selectedSurveyIds.includes(survey.id),
       );
@@ -237,7 +235,6 @@ export default function HistoryPage() {
       }
 
       const { importedCount, skippedDuplicateCount } = await importSurveys(
-        user?.id,
         parsed.surveys,
       );
       await refreshSurveys();
@@ -264,14 +261,12 @@ export default function HistoryPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteSurvey(id, user?.id);
+      await deleteSurvey(id);
       setSurveys((prev) => prev.filter((s) => s.id !== id));
     } catch (e) {
       setError((e as Error).message);
     }
   };
-
-  if (authLoading) return null;
 
   return (
     <div
@@ -332,9 +327,7 @@ export default function HistoryPage() {
         )}
 
         <p className="mb-4 text-sm text-ink-muted">
-          {user
-            ? "Signed in: showing surveys from your account."
-            : "Not signed in: showing surveys saved in this browser only."}
+          Showing surveys saved in this browser.
         </p>
 
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">

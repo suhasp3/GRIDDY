@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useEditor } from "../EditorContext";
-import { useAuth } from "../lib/authContext";
 import { saveSurvey } from "../lib/surveysApi";
 
 export default function SaveButton() {
-  const { user } = useAuth();
   const { state, dispatch } = useEditor();
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<"saved" | "error" | null>(null);
@@ -22,7 +20,7 @@ export default function SaveButton() {
     setSaving(true);
     setFlash(null);
     try {
-      await saveSurvey(state.config, user?.id);
+      await saveSurvey(state.config);
       dispatch({ type: "markSaved" });
       setFlash("saved");
       setTimeout(() => setFlash(null), 2000);

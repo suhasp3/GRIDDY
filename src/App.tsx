@@ -1,25 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import ConfigPanel from "./components/ConfigPanel";
 import PreviewPanel from "./components/PreviewPanel";
 import SaveButton from "./components/SaveButton";
 import TourGuide from "./components/TourGuide";
-import { useAuth } from "./lib/authContext";
 import { useEditor } from "./EditorContext";
 
 function App() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const { state, dispatch } = useEditor();
   const [tourRunning, setTourRunning] = useState(false);
   const onStartTour = () => setTourRunning(true);
 
   const expEnabled = state.config.experimental?.enabled ?? false;
-
-  const firstName = (user?.user_metadata?.first_name as string | undefined)?.trim();
-  const lastName = (user?.user_metadata?.last_name as string | undefined)?.trim();
-  const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join("").toUpperCase() ||
-    (user?.email?.[0] ?? "?").toUpperCase();
 
   return (
     <div className="min-h-screen bg-paper font-sans" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
@@ -89,33 +81,6 @@ function App() {
             >
               Take a tour
             </button>
-            {user ? (
-              <button
-                type="button"
-                onClick={() => navigate("/profile")}
-                title="View profile"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-tint text-xs font-bold text-accent"
-              >
-                {initials}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate("/auth")}
-                className="text-[13.5px] font-semibold text-ink-muted hover:text-ink"
-              >
-                Sign In
-              </button>
-            )}
-            {user && (
-              <button
-                type="button"
-                onClick={() => signOut()}
-                className="text-xs text-ink-faint hover:text-ink-muted"
-              >
-                Sign Out
-              </button>
-            )}
             <SaveButton />
           </div>
         </header>

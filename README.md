@@ -12,7 +12,7 @@ Team B: Ishita Siddamreddy, Suhas Puttoju, Katun Li, and Michael Jenkins.
 
 - Build and preview custom grid questions.
 - Configure survey categories, labels, colors, and interaction behavior.
-- Save surveys locally or to a signed-in account.
+- Save surveys locally in the browser.
 - Export saved surveys as JSON backups.
 - Export a ready-to-import Qualtrics `.qsf` (single grid or a multi-grid bundle) — no manual question/field setup required.
 
@@ -21,7 +21,6 @@ Team B: Ishita Siddamreddy, Suhas Puttoju, Katun Li, and Michael Jenkins.
 - React + TypeScript
 - Vite
 - Tailwind CSS
-- Supabase for authentication and cloud-saved surveys
 - Vercel for deployment
 - Qualtrics JavaScript export for survey delivery
 
@@ -38,13 +37,6 @@ Install dependencies:
 
 ```bash
 npm install
-```
-
-Create a `.env` file in the project root:
-
-```text
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_public_anon_key
 ```
 
 Run the app locally:
@@ -120,18 +112,13 @@ The production app is deployed on Vercel. Vercel builds the app with:
 npm run build
 ```
 
-and serves the generated `dist/` folder. The Vercel project must include these environment variables:
-
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-```
+and serves the generated `dist/` folder. No environment variables are required.
 
 ## Project Structure
 
 - `src/App.tsx`: Main grid editor page.
 - `src/components/`: Reusable editor, preview, save, and layout components.
 - `src/pages/`: Auth, profile, history, and error pages.
-- `src/lib/`: Supabase, auth, saved survey, and Qualtrics export helpers.
+- `src/lib/`: Saved survey and Qualtrics export helpers.
 - `src/grid-types.ts`: Shared TypeScript types for grid configuration.
 - `docs/client-handoff.md`: Client hand-off and deployment plan.
