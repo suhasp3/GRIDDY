@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useEditor } from "../EditorContext";
+import { encodeNamesCsv, splitCsvPreservingBlanks, useEditor } from "../EditorContext";
 import { CategoryMeta, ExperimentalConfig } from "../grid-types";
 import CategoryChips, { ChipItem } from "./CategoryChips";
 import ImageInput from "./ImageInput";
@@ -148,13 +148,7 @@ function chipItemsFromMeta(
   meta: Record<string, CategoryMeta>,
   fallbackColor = "#60a5fa",
 ): ChipItem[] {
-  // Preserve a blank entry mid-edit (e.g. the name currently being retyped)
-  // instead of dropping the chip entirely — but treat an entirely empty
-  // string as zero entries so "Clear all" doesn't leave a stray blank chip.
-  if (csv.trim() === "") return [];
-  return csv
-    .split(",")
-    .map((s) => s.trim())
+  return splitCsvPreservingBlanks(csv)
     .map((name) => ({
       name,
       color: meta[name]?.color ?? fallbackColor,
@@ -328,7 +322,7 @@ const QuestionGridForm: React.FC = () => {
           items={chipItemsFromMeta(layout.barriersCsv, layout.barrierMeta, "#94a3b8")}
           onChange={(items) =>
             update({
-              barriersCsv: items.map((i) => i.name).join(", "),
+              barriersCsv: encodeNamesCsv(items.map((i) => i.name)),
               barrierMeta: chipItemsToMeta(items),
             })
           }
@@ -375,7 +369,7 @@ export const ConfigPanel: React.FC = () => {
     dispatch({
       type: "updateSurvey",
       patch: {
-        categoriesCsv: items.map((i) => i.name).join(", "),
+        categoriesCsv: encodeNamesCsv(items.map((i) => i.name)),
         categoryMeta: chipItemsToMeta(items),
       },
     });
@@ -392,7 +386,7 @@ export const ConfigPanel: React.FC = () => {
     dispatch({
       type: "updateExperimental",
       patch: {
-        responseLabelsCsv: items.map((i) => i.name).join(", "),
+        responseLabelsCsv: encodeNamesCsv(items.map((i) => i.name)),
         responseLabelMeta: chipItemsToMeta(items),
       },
     });

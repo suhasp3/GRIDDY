@@ -24,9 +24,21 @@ const CATEGORY_PALETTE = [
 /** Split a CSV into trimmed names, preserving a blank entry mid-edit (e.g. the
  * name currently being retyped) while still treating an entirely empty/whitespace
  * string as zero entries (so "Clear all" doesn't leave a stray blank behind). */
-function splitCsvPreservingBlanks(csv: string): string[] {
+/** A lone "," is a sentinel written by encodeNamesCsv for the one case a plain
+ * join can't represent unambiguously: exactly one item with a blank name
+ * (which would otherwise join to "" — indistinguishable from zero items). */
+export function splitCsvPreservingBlanks(csv: string): string[] {
+  if (csv === ",") return [""];
   if (csv.trim() === "") return [];
   return csv.split(",").map((s) => s.trim());
+}
+
+/** Inverse of splitCsvPreservingBlanks: joins names back into a CSV, using the
+ * "," sentinel when the natural join would otherwise collide with "zero items"
+ * (e.g. after backspacing the only item's name down to nothing). */
+export function encodeNamesCsv(names: string[]): string {
+  const joined = names.join(", ");
+  return joined === "" && names.length > 0 ? "," : joined;
 }
 
 /** Detects a same-length CSV edit (i.e. a rename, not an add/remove) and maps

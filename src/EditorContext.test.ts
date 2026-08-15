@@ -3,8 +3,35 @@ import {
   syncCategoryMeta,
   editorReducer,
   normalizeConfig,
+  encodeNamesCsv,
+  splitCsvPreservingBlanks,
 } from "./EditorContext";
 import type { GridConfig } from "./grid-types";
+
+// ─── encodeNamesCsv / splitCsvPreservingBlanks ─────────────────────────────────
+
+describe("encodeNamesCsv / splitCsvPreservingBlanks round trip", () => {
+  it("round-trips zero items", () => {
+    expect(encodeNamesCsv([])).toBe("");
+    expect(splitCsvPreservingBlanks(encodeNamesCsv([]))).toEqual([]);
+  });
+
+  it("round-trips a single blank item distinctly from zero items", () => {
+    const csv = encodeNamesCsv([""]);
+    expect(csv).not.toBe(""); // must differ from the zero-items encoding
+    expect(splitCsvPreservingBlanks(csv)).toEqual([""]);
+  });
+
+  it("round-trips normal multi-item lists", () => {
+    const csv = encodeNamesCsv(["Wall", "Road"]);
+    expect(splitCsvPreservingBlanks(csv)).toEqual(["Wall", "Road"]);
+  });
+
+  it("round-trips a blank item alongside real ones", () => {
+    const csv = encodeNamesCsv(["Wall", "", "Road"]);
+    expect(splitCsvPreservingBlanks(csv)).toEqual(["Wall", "", "Road"]);
+  });
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -193,6 +220,21 @@ describe("editorReducer", () => {
       "r1-c1": "Fence",
       "r1-c2": "Road",
     });
+  });
+
+  it("updateLayout: keeps blockedCells when the only barrier's name is cleared to blank", () => {
+    // Regression: a single barrier's name join()-ing to "" is indistinguishable
+    // from zero barriers unless the editor uses the "," sentinel from
+    // encodeNamesCsv — this simulates that encoded patch.
+    const config = makeBaseConfig();
+    config.layout.barriersCsv = "Wall";
+    config.layout.blockedCells = { "r1-c1": "Wall" };
+    const state = editorReducer(makeState(config), {
+      type: "updateLayout",
+      patch: { barriersCsv: "," }, // "Wall" cleared to blank (sentinel-encoded)
+    });
+    expect(state.config.layout.blockedCells).toEqual({ "r1-c1": "" });
+    expect(Object.keys(state.config.layout.barrierMeta)).toEqual([""]);
   });
 
   it("updateLayout: remaps blockedCells when an unnamed barrier is renamed", () => {
