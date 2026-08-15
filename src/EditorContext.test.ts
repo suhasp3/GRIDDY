@@ -91,9 +91,14 @@ describe("syncCategoryMeta", () => {
     expect(Object.keys(result)).toEqual(["Alpha", "Beta"]);
   });
 
-  it("skips empty tokens from the CSV", () => {
+  it("preserves a blank token instead of dropping it (mid-edit: retyping a name)", () => {
     const result = syncCategoryMeta("A,,B,", {});
-    expect(Object.keys(result)).toEqual(["A", "B"]);
+    expect(Object.keys(result)).toEqual(["A", "", "B"]);
+  });
+
+  it("treats a fully empty/whitespace CSV as zero entries", () => {
+    expect(syncCategoryMeta("", {})).toEqual({});
+    expect(syncCategoryMeta("   ", {})).toEqual({});
   });
 
   it("does not assign a color already in use to a new category", () => {
@@ -102,6 +107,20 @@ describe("syncCategoryMeta", () => {
     };
     const result = syncCategoryMeta("A, B", existing);
     expect(result["B"].color).not.toBe(PALETTE_FIRST);
+  });
+
+  it("keeps a category's color while its name is temporarily blank mid-retype", () => {
+    // Simulates deleting the last letter of "Cat" (leaving "A,,B") then
+    // retyping it back to "Cat" — the color should survive the round trip
+    // instead of being reset by a fresh palette pick.
+    const withCat = syncCategoryMeta("A, Cat, B", {});
+    const catColor = withCat["Cat"].color;
+
+    const midEdit = syncCategoryMeta("A,,B", withCat);
+    expect(midEdit[""]).toBeDefined();
+
+    const retyped = syncCategoryMeta("A, Cat, B", midEdit);
+    expect(retyped["Cat"].color).toBe(catColor);
   });
 });
 

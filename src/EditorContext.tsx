@@ -21,15 +21,20 @@ const CATEGORY_PALETTE = [
   "#fb7185", // rose
 ];
 
+/** Split a CSV into trimmed names, preserving a blank entry mid-edit (e.g. the
+ * name currently being retyped) while still treating an entirely empty/whitespace
+ * string as zero entries (so "Clear all" doesn't leave a stray blank behind). */
+function splitCsvPreservingBlanks(csv: string): string[] {
+  if (csv.trim() === "") return [];
+  return csv.split(",").map((s) => s.trim());
+}
+
 /** Sync responseLabelMeta when the CSV changes: keep existing entries, add new ones with palette colors. */
 export function syncResponseLabelMeta(
   csv: string,
   existing: Record<string, CategoryMeta>,
 ): Record<string, CategoryMeta> {
-  const names = csv
-    .split(",")
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const names = splitCsvPreservingBlanks(csv);
 
   const usedColors = new Set(Object.values(existing).map((m) => m.color));
   let paletteIdx = 0;
@@ -72,10 +77,7 @@ export function syncCategoryMeta(
   csv: string,
   existing: Record<string, CategoryMeta>,
 ): Record<string, CategoryMeta> {
-  const names = csv
-    .split(",")
-    .map((c) => c.trim())
-    .filter(Boolean);
+  const names = splitCsvPreservingBlanks(csv);
 
   const usedColors = new Set(Object.values(existing).map((m) => m.color));
   let paletteIdx = 0;

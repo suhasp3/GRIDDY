@@ -81,7 +81,7 @@ export const CategoryChips: React.FC<Props> = ({
               className="h-3.5 w-3.5 flex-shrink-0 rounded-full"
               style={{ backgroundColor: item.color }}
             />
-            {item.name}
+            {item.name || <span className="italic text-ink-faint">Unnamed</span>}
             <span
               role="button"
               tabIndex={-1}

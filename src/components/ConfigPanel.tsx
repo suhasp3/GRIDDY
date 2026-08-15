@@ -148,10 +148,13 @@ function chipItemsFromMeta(
   meta: Record<string, CategoryMeta>,
   fallbackColor = "#60a5fa",
 ): ChipItem[] {
+  // Preserve a blank entry mid-edit (e.g. the name currently being retyped)
+  // instead of dropping the chip entirely — but treat an entirely empty
+  // string as zero entries so "Clear all" doesn't leave a stray blank chip.
+  if (csv.trim() === "") return [];
   return csv
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean)
     .map((name) => ({
       name,
       color: meta[name]?.color ?? fallbackColor,
