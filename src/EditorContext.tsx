@@ -103,8 +103,15 @@ export function syncCategoryMeta(
 export function normalizeConfig(config: GridConfig): GridConfig {
   const categoriesCsv = config.survey.categoriesCsv ?? "";
   const existingExp: Partial<ExperimentalConfig> = config.experimental ?? {};
+  const barriersCsv = config.layout.barriersCsv ?? "";
   return {
     ...config,
+    layout: {
+      ...config.layout,
+      barriersCsv,
+      barrierMeta: syncCategoryMeta(barriersCsv, config.layout.barrierMeta ?? {}),
+      blockedCells: config.layout.blockedCells ?? {},
+    },
     survey: {
       ...config.survey,
       selectionMode: config.survey.selectionMode ?? "paint",
@@ -154,6 +161,9 @@ function createDefaultConfig(): GridConfig {
     centerRow: null,
     centerCol: null,
     backgroundImageUrl: "",
+    barriersCsv: "",
+    barrierMeta: {},
+    blockedCells: {},
   };
 
   const tuning: TuningConfig = {
@@ -193,14 +203,34 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return { ...state, savedSurveyId: state.config.id };
     case "newSurvey":
       return { config: createDefaultConfig(), savedSurveyId: null };
-    case "updateLayout":
+    case "updateLayout": {
+      const mergedLayout = { ...state.config.layout, ...action.patch };
+      if (action.patch.barriersCsv !== undefined) {
+        mergedLayout.barrierMeta = syncCategoryMeta(
+          action.patch.barriersCsv,
+          mergedLayout.barrierMeta,
+        );
+        // Prune blockedCells referencing barrier types that no longer exist.
+        const validBarriers = new Set(
+          action.patch.barriersCsv
+            .split(",")
+            .map((b) => b.trim())
+            .filter(Boolean),
+        );
+        mergedLayout.blockedCells = Object.fromEntries(
+          Object.entries(mergedLayout.blockedCells).filter(([, v]) =>
+            validBarriers.has(v),
+          ),
+        );
+      }
       return {
         ...state,
         config: {
           ...state.config,
-          layout: { ...state.config.layout, ...action.patch },
+          layout: mergedLayout,
         },
       };
+    }
     case "updateTuning":
       return {
         ...state,

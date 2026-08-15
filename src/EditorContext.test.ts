@@ -23,6 +23,9 @@ function makeBaseConfig(): GridConfig {
       centerRow: null,
       centerCol: null,
       backgroundImageUrl: "",
+      barriersCsv: "",
+      barrierMeta: {},
+      blockedCells: {},
     },
     tuning: {
       gridGap: 10,
@@ -137,6 +140,28 @@ describe("editorReducer", () => {
     expect(state.config.layout.cols).toBe(2); // unchanged
   });
 
+  it("updateLayout: syncs barrierMeta when barriersCsv changes", () => {
+    const state = editorReducer(makeState(), {
+      type: "updateLayout",
+      patch: { barriersCsv: "Wall, Road" },
+    });
+    expect(Object.keys(state.config.layout.barrierMeta)).toEqual([
+      "Wall",
+      "Road",
+    ]);
+  });
+
+  it("updateLayout: prunes blockedCells for removed barrier types", () => {
+    const config = makeBaseConfig();
+    config.layout.barriersCsv = "Wall, Road";
+    config.layout.blockedCells = { "r1-c1": "Wall", "r1-c2": "Road" };
+    const state = editorReducer(makeState(config), {
+      type: "updateLayout",
+      patch: { barriersCsv: "Wall" }, // Road removed
+    });
+    expect(state.config.layout.blockedCells).toEqual({ "r1-c1": "Wall" });
+  });
+
   it("updateTuning: merges tuning patch", () => {
     const state = editorReducer(makeState(), {
       type: "updateTuning",
@@ -207,6 +232,29 @@ describe("normalizeConfig", () => {
     config.survey.categoryMeta = {};
     const result = normalizeConfig(config);
     expect(Object.keys(result.survey.categoryMeta)).toEqual(["Dogs", "Cats"]);
+  });
+
+  it("defaults new barrier layout fields for older configs", () => {
+    const config = makeBaseConfig();
+    // Simulate an older saved survey lacking the barrier fields.
+    // @ts-expect-error intentionally removing fields
+    delete config.layout.barriersCsv;
+    // @ts-expect-error intentionally removing fields
+    delete config.layout.barrierMeta;
+    // @ts-expect-error intentionally removing fields
+    delete config.layout.blockedCells;
+    const result = normalizeConfig(config);
+    expect(result.layout.barriersCsv).toBe("");
+    expect(result.layout.barrierMeta).toEqual({});
+    expect(result.layout.blockedCells).toEqual({});
+  });
+
+  it("syncs barrierMeta from barriersCsv", () => {
+    const config = makeBaseConfig();
+    config.layout.barriersCsv = "Wall, Road";
+    config.layout.barrierMeta = {};
+    const result = normalizeConfig(config);
+    expect(Object.keys(result.layout.barrierMeta)).toEqual(["Wall", "Road"]);
   });
 
   it("fills in missing experimental fields with defaults", () => {

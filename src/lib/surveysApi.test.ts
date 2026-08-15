@@ -67,6 +67,9 @@ function makeConfig(overrides: Partial<GridConfig> = {}): GridConfig {
       centerRow: null,
       centerCol: null,
       backgroundImageUrl: "",
+      barriersCsv: "",
+      barrierMeta: {},
+      blockedCells: {},
     },
     tuning: {
       gridGap: 10,
