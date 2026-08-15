@@ -29,6 +29,23 @@ function splitCsvPreservingBlanks(csv: string): string[] {
   return csv.split(",").map((s) => s.trim());
 }
 
+/** Detects a same-length CSV edit (i.e. a rename, not an add/remove) and maps
+ * each shifted name old -> new, so callers can remap references (like
+ * blockedCells/fixedAssignments values) onto the new name instead of losing
+ * them when the reference-validity prune runs below. */
+function renameMapFromCsvChange(oldCsv: string, newCsv: string): Record<string, string> {
+  const oldNames = splitCsvPreservingBlanks(oldCsv);
+  const newNames = splitCsvPreservingBlanks(newCsv);
+  if (oldNames.length !== newNames.length) return {};
+
+  const renames: Record<string, string> = {};
+  oldNames.forEach((oldName, i) => {
+    const newName = newNames[i];
+    if (oldName !== newName) renames[oldName] = newName;
+  });
+  return renames;
+}
+
 /** Sync responseLabelMeta when the CSV changes: keep existing entries, add new ones with palette colors. */
 export function syncResponseLabelMeta(
   csv: string,
@@ -208,21 +225,25 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case "updateLayout": {
       const mergedLayout = { ...state.config.layout, ...action.patch };
       if (action.patch.barriersCsv !== undefined) {
+        // Remap blockedCells onto a renamed barrier's new name before pruning,
+        // so renaming a barrier (including an unnamed one) doesn't wipe out
+        // the cells already blocked with it.
+        const renames = renameMapFromCsvChange(
+          state.config.layout.barriersCsv,
+          action.patch.barriersCsv,
+        );
         mergedLayout.barrierMeta = syncCategoryMeta(
           action.patch.barriersCsv,
           mergedLayout.barrierMeta,
         );
         // Prune blockedCells referencing barrier types that no longer exist.
         const validBarriers = new Set(
-          action.patch.barriersCsv
-            .split(",")
-            .map((b) => b.trim())
-            .filter(Boolean),
+          splitCsvPreservingBlanks(action.patch.barriersCsv),
         );
         mergedLayout.blockedCells = Object.fromEntries(
-          Object.entries(mergedLayout.blockedCells).filter(([, v]) =>
-            validBarriers.has(v),
-          ),
+          Object.entries(mergedLayout.blockedCells)
+            .map(([k, v]) => [k, renames[v] ?? v] as [string, string])
+            .filter(([, v]) => validBarriers.has(v)),
         );
       }
       return {
@@ -244,24 +265,30 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case "updateSurvey": {
       const merged = { ...state.config.survey, ...action.patch };
       if (action.patch.categoriesCsv !== undefined) {
+        // Remap fixedAssignments/weightedEntries onto a renamed category's new
+        // name before pruning, so renaming a category (including an unnamed
+        // one) doesn't wipe out cells already painted/weighted with it.
+        const renames = renameMapFromCsvChange(
+          state.config.survey.categoriesCsv,
+          action.patch.categoriesCsv,
+        );
         merged.categoryMeta = syncCategoryMeta(
           action.patch.categoriesCsv,
           merged.categoryMeta,
         );
         // Prune fixedAssignments referencing categories that no longer exist
         const validCats = new Set(
-          action.patch.categoriesCsv
-            .split(",")
-            .map((c) => c.trim())
-            .filter(Boolean),
+          splitCsvPreservingBlanks(action.patch.categoriesCsv),
         );
         const exp = state.config.experimental!;
         const prunedAssignments = Object.fromEntries(
-          Object.entries(exp.fixedAssignments).filter(([, v]) => validCats.has(v)),
+          Object.entries(exp.fixedAssignments)
+            .map(([k, v]) => [k, renames[v] ?? v] as [string, string])
+            .filter(([, v]) => validCats.has(v)),
         );
-        const prunedWeights = exp.weightedEntries.filter((e) =>
-          validCats.has(e.category),
-        );
+        const prunedWeights = exp.weightedEntries
+          .map((e) => ({ ...e, category: renames[e.category] ?? e.category }))
+          .filter((e) => validCats.has(e.category));
         return {
           ...state,
           config: {

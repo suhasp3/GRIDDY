@@ -181,6 +181,34 @@ describe("editorReducer", () => {
     expect(state.config.layout.blockedCells).toEqual({ "r1-c1": "Wall" });
   });
 
+  it("updateLayout: remaps blockedCells onto a renamed barrier instead of dropping them", () => {
+    const config = makeBaseConfig();
+    config.layout.barriersCsv = "Wall, Road";
+    config.layout.blockedCells = { "r1-c1": "Wall", "r1-c2": "Road" };
+    const state = editorReducer(makeState(config), {
+      type: "updateLayout",
+      patch: { barriersCsv: "Fence, Road" }, // "Wall" renamed to "Fence"
+    });
+    expect(state.config.layout.blockedCells).toEqual({
+      "r1-c1": "Fence",
+      "r1-c2": "Road",
+    });
+  });
+
+  it("updateLayout: remaps blockedCells when an unnamed barrier is renamed", () => {
+    const config = makeBaseConfig();
+    config.layout.barriersCsv = ", Road";
+    config.layout.blockedCells = { "r1-c1": "", "r1-c2": "Road" };
+    const state = editorReducer(makeState(config), {
+      type: "updateLayout",
+      patch: { barriersCsv: "Wall, Road" }, // unnamed barrier renamed to "Wall"
+    });
+    expect(state.config.layout.blockedCells).toEqual({
+      "r1-c1": "Wall",
+      "r1-c2": "Road",
+    });
+  });
+
   it("updateTuning: merges tuning patch", () => {
     const state = editorReducer(makeState(), {
       type: "updateTuning",
@@ -221,6 +249,27 @@ describe("editorReducer", () => {
     });
     expect(state.config.experimental!.weightedEntries).toEqual([
       { category: "A", weight: 1 },
+    ]);
+  });
+
+  it("updateSurvey: remaps fixedAssignments/weightedEntries onto a renamed category", () => {
+    const config = makeBaseConfig();
+    config.experimental!.fixedAssignments = { cell1: "A", cell2: "B" };
+    config.experimental!.weightedEntries = [
+      { category: "A", weight: 1 },
+      { category: "B", weight: 2 },
+    ];
+    const state = editorReducer(makeState(config), {
+      type: "updateSurvey",
+      patch: { categoriesCsv: "Alpha, B" }, // "A" renamed to "Alpha"
+    });
+    expect(state.config.experimental!.fixedAssignments).toEqual({
+      cell1: "Alpha",
+      cell2: "B",
+    });
+    expect(state.config.experimental!.weightedEntries).toEqual([
+      { category: "Alpha", weight: 1 },
+      { category: "B", weight: 2 },
     ]);
   });
 
