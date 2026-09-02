@@ -5,7 +5,7 @@ import ImageInput from "./ImageInput";
 const SWATCH_PALETTE = [
   "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6",
   "#3b82f6", "#ec4899", "#84cc16", "#06b6d4",
-  "#f87171", "#60a5fa", "#4ade80", "#fb923c",
+  "#000000", "#ffffff",
 ];
 
 export interface ChipItem {
@@ -172,13 +172,34 @@ export const CategoryChips: React.FC<Props> = ({
                   style={{
                     backgroundColor: hex,
                     outline:
-                      hex === open.color
+                      hex.toLowerCase() === open.color.toLowerCase()
                         ? "2.5px solid #2a241c"
                         : "1px solid #e2dccf",
                     outlineOffset: "2px",
                   }}
                 />
               ))}
+              <label
+                className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full transition-transform hover:scale-110"
+                title="Custom color"
+                style={{
+                  background:
+                    "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                  outline: SWATCH_PALETTE.map((h) => h.toLowerCase()).includes(
+                    open.color.toLowerCase(),
+                  )
+                    ? "1px solid #e2dccf"
+                    : "2.5px solid #2a241c",
+                  outlineOffset: "2px",
+                }}
+              >
+                <input
+                  type="color"
+                  value={open.color}
+                  onChange={(e) => update(openIndex, { color: e.target.value })}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+              </label>
             </div>
           </div>
 
