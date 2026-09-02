@@ -30,7 +30,10 @@ const CATEGORY_PALETTE = [
 export function splitCsvPreservingBlanks(csv: string): string[] {
   if (csv === ",") return [""];
   if (csv.trim() === "") return [];
-  return csv.split(",").map((s) => s.trim());
+  // Names are stored joined with ", " (see encodeNamesCsv), so strip only the
+  // single leading space that join adds — not a full trim, which would eat a
+  // trailing space the user is mid-typing (blocking "New " -> "New York").
+  return csv.split(",").map((s) => s.replace(/^ /, ""));
 }
 
 /** Inverse of splitCsvPreservingBlanks: joins names back into a CSV, using the

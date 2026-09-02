@@ -58,7 +58,12 @@ export const CategoryChips: React.FC<Props> = ({
     const color =
       SWATCH_PALETTE.find((c) => !used.has(c)) ??
       SWATCH_PALETTE[items.length % SWATCH_PALETTE.length];
-    const next = [...items, { name: "New label", color, imageUrl: "" }];
+    // Keep the name unique — duplicate names collapse into one key in the
+    // name-keyed meta map, so two "New label" chips would share one color.
+    const taken = new Set(items.map((it) => it.name));
+    let name = "New label";
+    for (let n = 2; taken.has(name); n++) name = `New label ${n}`;
+    const next = [...items, { name, color, imageUrl: "" }];
     onChange(next);
     setOpenIndex(next.length - 1);
   };
