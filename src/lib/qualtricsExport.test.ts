@@ -180,6 +180,7 @@ describe("buildQualtricsQsf", () => {
       "QGO",
       "RS",
       "SCO",
+      "SLF",
       "SO",
       "SQ",
       "STAT",
@@ -192,6 +193,16 @@ describe("buildQualtricsQsf", () => {
       (e: { Element: string }) => e.Element === "BL",
     );
     expect(Array.isArray(blockEl.Payload)).toBe(true);
+  });
+
+  it("ships a blank base Look-and-Feel so imports don't inherit the brand theme", () => {
+    const qsf = JSON.parse(buildQualtricsQsfForConfig(makeConfig()));
+    const slf = qsf.SurveyElements.find(
+      (e: { Element: string }) => e.Element === "SLF",
+    );
+    expect(slf.Payload.Skin.skinId).toBe("*base*");
+    expect(slf.Payload.Header).toBe("");
+    expect(slf.Payload.Footer).toBe("");
   });
 
   it("sets a non-empty SurveyBrandID (importer requires length >= 1)", () => {
