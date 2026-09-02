@@ -1434,33 +1434,6 @@ export function buildQualtricsQsf(
       },
     },
     {
-      // Ship an explicit "blank" Look-and-Feel so the imported survey does NOT
-      // inherit the importing Qualtrics brand's default theme (e.g. a UNC/Sheps
-      // header graphic and side rails). `*base*` is Qualtrics' built-in
-      // brand-neutral base theme, stable across accounts.
-      SurveyID: surveyId,
-      Element: "SLF",
-      PrimaryAttribute: surveyId,
-      SecondaryAttribute: null,
-      TertiaryAttribute: null,
-      Payload: {
-        Header: "",
-        Footer: "",
-        Skin: {
-          brandingId: null,
-          templateId: null,
-          overrides: null,
-          skinType: "templated",
-          skinId: "*base*",
-        },
-        General: {},
-        Fonts: {},
-        Colors: {},
-        ProgressBar: {},
-        Screens: {},
-      },
-    },
-    {
       SurveyID: surveyId,
       Element: "SO",
       PrimaryAttribute: "Survey Options",
