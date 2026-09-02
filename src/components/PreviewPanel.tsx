@@ -827,6 +827,20 @@ export const PreviewPanel: React.FC = () => {
                   position: "absolute",
                   backgroundColor: bColor,
                 };
+                // When the barrier has an image, carry it onto the gap-bridging
+                // fillers too (positioned to echo the edge/corner they extend),
+                // so joined cells read as one textured shape instead of solid
+                // color strips stitching the tiles together.
+                const bridge = (position: string): React.CSSProperties =>
+                  bImage
+                    ? {
+                        ...filler,
+                        backgroundImage: `url('${bImage}')`,
+                        backgroundSize: "cover",
+                        backgroundPosition: position,
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : filler;
                 return (
                   <div
                     key={cell.key}
@@ -854,13 +868,13 @@ export const PreviewPanel: React.FC = () => {
                     }}
                   >
                     {/* Edge bridges */}
-                    {cRight && <div style={{ ...filler, top: 0, bottom: 0, right: -gap, width: gap }} />}
-                    {cDown && <div style={{ ...filler, left: 0, right: 0, bottom: -gap, height: gap }} />}
+                    {cRight && <div style={{ ...bridge("right center"), top: 0, bottom: 0, right: -gap, width: gap }} />}
+                    {cDown && <div style={{ ...bridge("center bottom"), left: 0, right: 0, bottom: -gap, height: gap }} />}
                     {/* Inner-corner fills (only for a true solid-block corner) */}
-                    {cRight && cDown && cDownRight && <div style={{ ...filler, right: -gap, width: gap, bottom: -gap, height: gap }} />}
-                    {cLeft && cDown && cDownLeft && <div style={{ ...filler, left: -gap, width: gap, bottom: -gap, height: gap }} />}
-                    {cRight && cUp && cUpRight && <div style={{ ...filler, right: -gap, width: gap, top: -gap, height: gap }} />}
-                    {cLeft && cUp && cUpLeft && <div style={{ ...filler, left: -gap, width: gap, top: -gap, height: gap }} />}
+                    {cRight && cDown && cDownRight && <div style={{ ...bridge("right bottom"), right: -gap, width: gap, bottom: -gap, height: gap }} />}
+                    {cLeft && cDown && cDownLeft && <div style={{ ...bridge("left bottom"), left: -gap, width: gap, bottom: -gap, height: gap }} />}
+                    {cRight && cUp && cUpRight && <div style={{ ...bridge("right top"), right: -gap, width: gap, top: -gap, height: gap }} />}
+                    {cLeft && cUp && cUpLeft && <div style={{ ...bridge("left top"), left: -gap, width: gap, top: -gap, height: gap }} />}
                     {bImage && (
                       <img
                         src={bImage}

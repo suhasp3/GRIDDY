@@ -130,10 +130,16 @@ Qualtrics.SurveyEngine.addOnReady(function()
 
 	// Append a background-colored filler positioned with fixed pixel offsets.
 	// css keys are among top/bottom/left/right/width/height (all "<n>px").
-	function makeFiller(color, css) {
+	function makeFiller(color, css, image, imagePos) {
 		var f = document.createElement("div");
 		f.style.position = "absolute";
 		f.style.backgroundColor = color;
+		if (image) {
+			f.style.backgroundImage = "url('" + image + "')";
+			f.style.backgroundSize = "cover";
+			f.style.backgroundRepeat = "no-repeat";
+			f.style.backgroundPosition = imagePos || "center";
+		}
 		for (var k in css) { f.style[k] = css[k]; }
 		return f;
 	}
@@ -177,12 +183,12 @@ Qualtrics.SurveyEngine.addOnReady(function()
 		// cell all connect — i.e. a true solid block, so the gap doesn't punch a
 		// hole through its middle. An L-turn (diagonal cell unblocked) leaves its
 		// corner open instead of poking out toward it.
-		if (cRight) cellRef.appendChild(makeFiller(color, { top: "0", bottom: "0", right: ng, width: g }));
-		if (cDown) cellRef.appendChild(makeFiller(color, { left: "0", right: "0", bottom: ng, height: g }));
-		if (cRight && cDown && cDownRight) cellRef.appendChild(makeFiller(color, { right: ng, width: g, bottom: ng, height: g }));
-		if (cLeft && cDown && cDownLeft) cellRef.appendChild(makeFiller(color, { left: ng, width: g, bottom: ng, height: g }));
-		if (cRight && cUp && cUpRight) cellRef.appendChild(makeFiller(color, { right: ng, width: g, top: ng, height: g }));
-		if (cLeft && cUp && cUpLeft) cellRef.appendChild(makeFiller(color, { left: ng, width: g, top: ng, height: g }));
+		if (cRight) cellRef.appendChild(makeFiller(color, { top: "0", bottom: "0", right: ng, width: g }, image, "right center"));
+		if (cDown) cellRef.appendChild(makeFiller(color, { left: "0", right: "0", bottom: ng, height: g }, image, "center bottom"));
+		if (cRight && cDown && cDownRight) cellRef.appendChild(makeFiller(color, { right: ng, width: g, bottom: ng, height: g }, image, "right bottom"));
+		if (cLeft && cDown && cDownLeft) cellRef.appendChild(makeFiller(color, { left: ng, width: g, bottom: ng, height: g }, image, "left bottom"));
+		if (cRight && cUp && cUpRight) cellRef.appendChild(makeFiller(color, { right: ng, width: g, top: ng, height: g }, image, "right top"));
+		if (cLeft && cUp && cUpLeft) cellRef.appendChild(makeFiller(color, { left: ng, width: g, top: ng, height: g }, image, "left top"));
 
 		if (image) {
 			var img = document.createElement("img");
