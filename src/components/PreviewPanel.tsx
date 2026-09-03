@@ -586,64 +586,6 @@ export const PreviewPanel: React.FC = () => {
           </div>
         )}
 
-        {/* Block-cells tool — researcher paints structural barriers/walls */}
-        {showBlockTool && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setBlockEditMode((v) => !v)}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                blockEditMode
-                  ? "border-ink bg-ink text-white"
-                  : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-800"
-              }`}
-            >
-              {blockEditMode ? "Done blocking" : "Block cells"}
-            </button>
-            {blockEditMode && (
-              <>
-                <span className="text-xs font-medium text-slate-600">Barrier:</span>
-                <div className="flex flex-wrap gap-1">
-                  {barriers.map((item) => {
-                    const color = layout.barrierMeta?.[item]?.color ?? "#94a3b8";
-                    const isActive = activeBarrier === item;
-                    return (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => setActiveBarrier(item)}
-                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
-                          isActive
-                            ? "shadow-sm"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                        }`}
-                        style={
-                          isActive
-                            ? {
-                                borderColor: color,
-                                backgroundColor: hexToRgba(color, 0.1),
-                                color: "#0f172a",
-                              }
-                            : {}
-                        }
-                      >
-                        <span
-                          className="h-2 w-2 flex-shrink-0 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
-                        {item}
-                      </button>
-                    );
-                  })}
-                </div>
-                <span className="text-xs text-slate-500">
-                  Click cells to block or unblock them.
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
         {/* Weighted-mode hint (no button here — Regenerate lives in the bottom bar) */}
         {expEnabled &&
           experimentalTab === "setup" &&
@@ -695,6 +637,64 @@ export const PreviewPanel: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Block-cells tool — researcher paints structural barriers/walls */}
+        {showBlockTool && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBlockEditMode((v) => !v)}
+              className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
+                blockEditMode
+                  ? "border-accent bg-accent text-white shadow-sm"
+                  : "border-accent/40 bg-accent-tint text-accent hover:border-accent hover:bg-accent-tint/70"
+              }`}
+            >
+              {blockEditMode ? "Done blocking" : "Block cells"}
+            </button>
+            {blockEditMode && (
+              <>
+                <span className="text-xs font-medium text-slate-600">Barrier:</span>
+                <div className="flex flex-wrap gap-1">
+                  {barriers.map((item) => {
+                    const color = layout.barrierMeta?.[item]?.color ?? "#94a3b8";
+                    const isActive = activeBarrier === item;
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setActiveBarrier(item)}
+                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
+                          isActive
+                            ? "shadow-sm"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                        style={
+                          isActive
+                            ? {
+                                borderColor: color,
+                                backgroundColor: hexToRgba(color, 0.1),
+                                color: "#0f172a",
+                              }
+                            : {}
+                        }
+                      >
+                        <span
+                          className="h-2 w-2 flex-shrink-0 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                        {item}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-xs text-slate-500">
+                  Click cells to block or unblock them.
+                </span>
+              </>
+            )}
           </div>
         )}
 
