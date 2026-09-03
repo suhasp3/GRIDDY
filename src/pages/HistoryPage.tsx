@@ -186,19 +186,19 @@ export default function HistoryPage() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/history/combine")}
-              disabled={transferring || surveys.length === 0}
-              className="rounded-md bg-accent-tint px-3 py-1.5 text-sm font-semibold text-accent hover:opacity-90 disabled:opacity-50"
-            >
-              Make multi-question survey
-            </button>
-            <button
-              type="button"
               onClick={handleImportClick}
               disabled={transferring}
               className="rounded-md bg-paper-window px-3 py-1.5 text-sm font-semibold text-ink-muted hover:bg-hairline-warm disabled:opacity-50"
             >
               Import JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/history/combine")}
+              disabled={transferring || surveys.length === 0}
+              className="rounded-md bg-accent-tint px-3 py-1.5 text-sm font-semibold text-accent hover:opacity-90 disabled:opacity-50"
+            >
+              Make multi-question survey
             </button>
             <button
               type="button"
