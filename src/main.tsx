@@ -6,6 +6,7 @@ import Providers from "./components/Providers.tsx";
 import "./index.css";
 import ErrorPage from "./pages/error-page.tsx";
 import HistoryPage from "./pages/HistoryPage.tsx";
+import CombineSurveysPage from "./pages/CombineSurveysPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
       {
         path: "history",
         element: <HistoryPage />,
+      },
+      {
+        path: "history/combine",
+        element: <CombineSurveysPage />,
       },
     ],
   },
